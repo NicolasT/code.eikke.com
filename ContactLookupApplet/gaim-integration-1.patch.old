@@ -1,0 +1,148 @@
+? gaim-integration.patch
+Index: configure.ac
+===================================================================
+RCS file: /cvs/gnome/contact-lookup-applet/configure.ac,v
+retrieving revision 1.29
+diff -u -b -B -r1.29 configure.ac
+--- configure.ac	7 Jan 2005 16:42:26 -0000	1.29
++++ configure.ac	20 Jan 2005 20:34:43 -0000
+@@ -43,6 +43,15 @@
+ AC_SUBST(EVO_CFLAGS)
+ AC_SUBST(EVO_LIBS)
+ 
++dnl Check Gaim support
++PKG_CHECK_MODULES(GAIM, gaim >= 1.0, have_gaim=true, have_gaim=false)
++if test "x$have_gaim" = "xtrue" ; then
++  AC_DEFINE(ENABLE_GAIM,[],[Whether we want Gaim support])
++  AC_SUBST(GAIM_CFLAGS)
++  GAIM_REMOTE_LIBS="-lgaim-remote"
++  AC_SUBST(GAIM_REMOTE_LIBS)
++fi
++
+ AC_OUTPUT([
+ Makefile
+ data/Makefile
+Index: data/contact-lookup-applet.glade
+===================================================================
+RCS file: /cvs/gnome/contact-lookup-applet/data/contact-lookup-applet.glade,v
+retrieving revision 1.7
+diff -u -b -B -r1.7 contact-lookup-applet.glade
+--- data/contact-lookup-applet.glade	8 Oct 2004 15:24:04 -0000	1.7
++++ data/contact-lookup-applet.glade	20 Jan 2005 20:34:44 -0000
+@@ -387,7 +387,7 @@
+ 
+ 	      <child>
+ 		<widget class="GtkButton" id="im_button">
+-		  <property name="sensitive">False</property>
++		  <property name="visible">true</property>
+ 		  <property name="can_focus">True</property>
+ 		  <property name="label" translatable="yes">Send _Instant Message</property>
+ 		  <property name="use_underline">True</property>
+@@ -399,7 +399,7 @@
+ 		  <property name="right_attach">3</property>
+ 		  <property name="top_attach">1</property>
+ 		  <property name="bottom_attach">2</property>
+-		  <property name="x_options"></property>
++		  <property name="x_options">fill</property>
+ 		  <property name="y_options">fill</property>
+ 		</packing>
+ 	      </child>
+Index: src/Makefile.am
+===================================================================
+RCS file: /cvs/gnome/contact-lookup-applet/src/Makefile.am,v
+retrieving revision 1.6
+diff -u -b -B -r1.6 Makefile.am
+--- src/Makefile.am	4 Oct 2004 19:37:40 -0000	1.6
++++ src/Makefile.am	20 Jan 2005 20:34:44 -0000
+@@ -17,5 +17,5 @@
+ 	glade-utils.h \
+ 	glade-utils.c
+ 
+-contact_lookup_applet_CFLAGS = $(GTK_CFLAGS) $(PANEL_CFLAGS) $(EVO_CFLAGS) $(GLADE_CFLAGS) -Wall
+-contact_lookup_applet_LDADD = $(GTK_LIBS) $(PANEL_LIBS) $(EVO_LIBS) $(GLADE_LIBS)
++contact_lookup_applet_CFLAGS = $(GTK_CFLAGS) $(PANEL_CFLAGS) $(EVO_CFLAGS) $(GLADE_CFLAGS) $(GAIM_CFLAGS) -Wall
++contact_lookup_applet_LDADD = $(GTK_LIBS) $(PANEL_LIBS) $(EVO_LIBS) $(GLADE_LIBS) $(GAIM_REMOTE_LIBS)
+Index: src/contact-dialog.c
+===================================================================
+RCS file: /cvs/gnome/contact-lookup-applet/src/contact-dialog.c,v
+retrieving revision 1.14
+diff -u -b -B -r1.14 contact-dialog.c
+--- src/contact-dialog.c	4 Oct 2004 19:37:40 -0000	1.14
++++ src/contact-dialog.c	20 Jan 2005 20:34:45 -0000
+@@ -35,6 +35,14 @@
+ 
+ #include "glade-utils.h"
+ 
++#ifdef ENABLE_GAIM
++#include <gaim/remote.h>
++#include <gaim/remote-socket.h>
++/* For close(1) */
++#include <unistd.h>
++#include <glib.h>
++#endif /* ENABLE_GAIM */
++
+ static void
+ homepage_clicked_cb (GtkButton *button, const char* homepage)
+ {
+@@ -59,6 +67,51 @@
+   g_free (url);
+ }
+ 
++#ifdef ENABLE_GAIM
++static void
++im_clicked_cb (GtkButton *button, GtkWidget *combo)
++{
++  GtkTreeIter iter;
++  GtkWidget *dialog;
++  int fd;
++  GaimRemotePacket *p = NULL;
++  char tmp[1000];
++  int session = 0;  
++  
++  g_return_if_fail (combo != NULL);
++
++  if (gtk_combo_box_get_active_iter (GTK_COMBO_BOX (combo), &iter)) {
++    GtkTreeModel *model;
++    char *buddyid;
++
++    model = gtk_combo_box_get_model (GTK_COMBO_BOX (combo));
++    gtk_tree_model_get (model, &iter, 1, &buddyid, -1);
++
++    fd = gaim_remote_session_connect(session);
++    if (fd < 0) {
++      dialog = gtk_message_dialog_new_with_markup(NULL, 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
++                                                  _("<span weight=\"bold\" size=\"large\">Gaim not running (on session %d)</span>\n\nIs the \"Remote Control\" plugin loaded?"),
++                                                  session);
++      gtk_dialog_run(GTK_DIALOG(dialog));
++      gtk_widget_destroy(dialog);
++      g_free(buddyid);
++      return;
++    }
++
++    p = gaim_remote_packet_new(CUI_TYPE_REMOTE, CUI_REMOTE_NEW_CONVO);
++    sprintf(tmp, "%04zd%s", strlen(buddyid), buddyid);
++    gaim_remote_packet_append_string(p, tmp);
++
++    printf("Request to open convo with %s\n", buddyid);
++    gaim_remote_session_send_packet(fd, p);
++    close(fd);
++    gaim_remote_packet_free(p);
++    
++    g_free (buddyid);
++  }
++}    
++#endif /* ENABLE_GAIM */
++
+ static void
+ send_email_clicked_cb (GtkButton *button, GtkWidget *combo)
+ {
+@@ -365,6 +418,9 @@
+ 
+   /* Instant Messaging */
+   create_combo (contact, im_combo, im_box, contactinfo_im);
++#ifdef ENABLE_GAIM
++  g_signal_connect (im_button, "clicked", (GCallback)im_clicked_cb, im_combo);
++#endif
+   
+   /* Email */
+   create_combo (contact, email_combo, email_box, contactinfo_email);

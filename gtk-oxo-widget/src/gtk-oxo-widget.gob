@@ -1,0 +1,287 @@
+requires 2.0.0
+
+%h{
+#include <gtk/gtk.h>
+%}
+
+%ph{
+#define CHECK_IN_RANGE(val, min, max) ((val >= min && val <= max) ? 1 : 0)
+%}
+
+enum GTK_OXO_WIDGET_VALUE {
+        EMPTY,
+        X,
+        O
+} Gtk:Oxo:Widget:Value;
+
+class Gtk:Oxo:Widget from Gtk:Drawing:Area {
+        private GtkOxoWidgetValue **values = NULL
+                destroywith g_free;
+        private GtkOxoWidgetValue last_char;
+        private gboolean initialized = FALSE;
+
+        private guint rows = 0;
+        private guint cols = 0;
+        
+        public Gtk:Widget * new(guint rows, guint cols) {
+                Self *ret = SELF(GET_NEW);
+                guint i = 0;
+
+                gtk_widget_add_events(GTK_WIDGET(ret), GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
+
+                ret->_priv->last_char = GTK_OXO_WIDGET_VALUE_X;
+                
+                ret->_priv->values = (GtkOxoWidgetValue **)g_malloc0(rows * sizeof(GtkOxoWidgetValue *));
+                for(i = 0; i < rows; i++) {
+                        ret->_priv->values[i] = (GtkOxoWidgetValue *)g_malloc0(cols * sizeof(GtkOxoWidgetValue));
+                }
+
+                ret->_priv->rows = rows;
+                ret->_priv->cols = cols;
+
+                ret->_priv->initialized = TRUE;
+
+                return GTK_WIDGET(ret);
+        }
+
+        override (Gtk:Widget)
+        gboolean expose_event(Gtk:Widget *self (check null type), GdkEventExpose *event (check null)) {
+                cairo_t *cr = NULL;
+
+                /* Cliping */
+                cr = gdk_cairo_create(self->window);
+                cairo_rectangle(cr, event->area.x, event->area.y, event->area.width, event->area.height);
+                cairo_clip(cr);
+
+                if(SELF(self)->_priv->initialized == TRUE)
+                        self_draw(self, cr);
+
+                cairo_destroy(cr);
+
+                return FALSE;
+        }
+
+        private void draw(Gtk:Widget *self (check null type), cairo_t *cr (check null)) {
+                guint i = 0;
+                guint j = 0;
+
+                Self *s = SELF(self);
+
+                /* Sla de huidige "borstel" op op de cairo stack */
+                cairo_save(cr);
+                /* Kies een zwarte "borstel" */
+                cairo_set_source_rgb (cr, 0, 0,0);
+                /* Kies een iets dikkere borstel */
+                cairo_set_line_width(cr, 2 * cairo_get_line_width(cr));
+                /* En teken een rechthoek rondom onze volledige drawing area */
+                cairo_rectangle(cr, self->allocation.x + 3, self->allocation.y + 3, self->allocation.width - 6, self->allocation.height - 6);
+                /* En ga terug naar de beginwaarden (pop) */
+                cairo_restore(cr);
+                /* Kies een witte borstel */
+                cairo_set_source_rgb (cr, 1, 1, 1);
+                /* En vul vervolgens het vlak */
+                cairo_fill_preserve (cr);
+                cairo_set_source_rgb (cr, 0, 0, 0);
+
+                cairo_save(cr);
+                cairo_set_line_width(cr, 3 * cairo_get_line_width(cr));
+                cairo_set_source_rgb (cr, 0, 0,0);
+                /* Eerst de horizontale lijnen */
+                for(i = 1; i < s->_priv->rows; i++) {
+                        cairo_move_to(cr, self->allocation.x + 3, self->allocation.y + (i * self->allocation.height / s->_priv->rows));
+                        cairo_line_to(cr, self->allocation.x + self->allocation.width - 3, self->allocation.y + (i * self->allocation.height / s->_priv->rows));
+                }
+                /* Dan de verticale */
+                for(i = 1; i < s->_priv->cols; i++) {
+                        cairo_move_to(cr, self->allocation.x + (i * self->allocation.width / s->_priv->cols) , self->allocation.y + 3);
+                        cairo_line_to(cr, self->allocation.x + (i * self->allocation.width / s->_priv->cols), self->allocation.y + self->allocation.height - 3);
+                }
+                cairo_restore(cr);
+
+                /* Teken rooster */
+                cairo_stroke(cr);
+
+                for(i = 0; i < s->_priv->rows; i++) {
+                        for(j = 0; j < s->_priv->cols; j++) {
+                                switch(s->_priv->values[i][j]) {
+                                        case GTK_OXO_WIDGET_VALUE_O:
+                                                self_draw_o(self, cr, i, j);
+                                                break;
+                                        case GTK_OXO_WIDGET_VALUE_X:
+                                                self_draw_x(self, cr, i, j);
+                                                break;
+                                        default:
+                                                break;
+                                }
+                        }
+                }
+        }
+
+        private void draw_o(Gtk:Widget *self (check null type), cairo_t *cr (check null), guint row, guint col) {
+                gdouble x = 0., y = 0.;
+                gdouble radius = 0.;
+                gdouble radii[2] = {0., 0.};
+
+                g_return_if_fail(row < SELF(self)->_priv->rows);
+                g_return_if_fail(col < SELF(self)->_priv->cols);
+
+                /* Zoek coördinaten middelpunt */
+                x = (gdouble)self->allocation.x + ((gdouble)col + 0.5) * (self->allocation.width / SELF(self)->_priv->cols);
+                y = (gdouble)self->allocation.y + ((gdouble)row + 0.5) * (self->allocation.height / SELF(self)->_priv->rows);
+
+                /* 80% gevuld */
+                radii[0] = ((gdouble)self->allocation.width / (gdouble)SELF(self)->_priv->cols) * 0.4;
+                radii[1] = ((gdouble)self->allocation.height / (gdouble)SELF(self)->_priv->rows) * 0.4;
+
+                radius = MIN(radii[0], radii[1]);
+                
+                cairo_set_source_rgb (cr, 0, 0, 0);
+                cairo_arc (cr, x, y, radius, 0, 2 * G_PI);
+
+                cairo_stroke(cr);
+        }
+
+        private void draw_x(Gtk:Widget *self (check null type), cairo_t *cr (check null), guint row, guint col) {
+                gdouble x = 0., y = 0.;
+
+                g_return_if_fail(row < SELF(self)->_priv->rows);
+                g_return_if_fail(col < SELF(self)->_priv->cols);
+                
+                /* left to right, top to bottom */
+                x = ((gdouble)col + 0.1) * (self->allocation.width / SELF(self)->_priv->cols);
+                y = ((gdouble)row + 0.1) * (self->allocation.height / SELF(self)->_priv->rows);
+
+                cairo_move_to(cr, x, y);
+
+                x += 0.8 * (self->allocation.width / (gdouble)SELF(self)->_priv->cols);
+                y += 0.8 * (self->allocation.height / (gdouble)SELF(self)->_priv->rows);
+
+                cairo_set_source_rgb (cr, 0, 0, 0);
+                cairo_line_to(cr, x, y);
+
+                cairo_stroke(cr);
+
+                /* right to left, top to bottom */
+                y -= 0.8 * (self->allocation.height / (gdouble)SELF(self)->_priv->rows);
+
+                cairo_move_to(cr, x, y);
+
+                x -= 0.8 * (self->allocation.width / (gdouble)SELF(self)->_priv->cols);
+                y += 0.8 * (self->allocation.height / (gdouble)SELF(self)->_priv->rows);
+
+                cairo_set_source_rgb (cr, 0, 0, 0);
+                cairo_line_to(cr, x, y);
+
+                cairo_stroke(cr);
+        }
+
+        public void set_o(self, guint row, guint col) {
+                g_return_if_fail(row < SELF(self)->_priv->rows);
+                g_return_if_fail(col < SELF(self)->_priv->cols);
+                self->_priv->values[row][col] = GTK_OXO_WIDGET_VALUE_O;
+        }
+
+        public void set_x(self, guint row, guint col) {
+                g_return_if_fail(row < SELF(self)->_priv->rows);
+                g_return_if_fail(col < SELF(self)->_priv->cols);
+                self->_priv->values[row][col] = GTK_OXO_WIDGET_VALUE_X;
+        }
+
+        override (Gtk:Widget)
+        gboolean button_press_event(Gtk:Widget *self (check null type), GdkEventButton *event (check null)) {
+                guint row = 0, col = 0;
+                gboolean winner = FALSE;
+
+                g_return_val_if_fail(event->button == 1, FALSE);
+
+                col = (guint)(event->x / (self->allocation.width / SELF(self)->_priv->cols));
+                row = (guint)(event->y / (self->allocation.height / SELF(self)->_priv->rows));
+
+                /* g_debug("Click R %d C %d", row, col); */
+
+                if(self_get_field_value(SELF(self), row, col) != GTK_OXO_WIDGET_VALUE_EMPTY) {
+                        self_invalid_move(SELF(self), row, col);
+                        /* We didn't handle the click */
+                        return FALSE;
+                }
+
+                if(SELF(self)->_priv->last_char == GTK_OXO_WIDGET_VALUE_X) {
+                        SELF(self)->_priv->last_char = GTK_OXO_WIDGET_VALUE_O;
+                        self_set_o(SELF(self), row, col);
+                }
+                else {
+                        SELF(self)->_priv->last_char = GTK_OXO_WIDGET_VALUE_X;
+                        self_set_x(SELF(self), row, col);
+                }
+
+                self_move(SELF(self), row, col);
+
+                gtk_widget_queue_draw_area(self, col * (self->allocation.width / SELF(self)->_priv->cols), row * (self->allocation.height / SELF(self)->_priv->rows), (self->allocation.width / SELF(self)->_priv->cols), (self->allocation.height / SELF(self)->_priv->rows));
+
+                winner = self_check_winning_move(SELF(self), row, col);
+                if(winner == TRUE) {
+                        self_winner(SELF(self));
+                }
+
+                return TRUE;
+        }
+
+        override (Gtk:Widget)
+        void size_request(Gtk:Widget *self (check null type), GtkRequisition *requisition (check null)) {
+                requisition->width = 200;
+                requisition->height = 200;
+        }
+
+        /* I want G_INLINE_FUNC here :( */
+        private GtkOxoWidgetValue get_field_value(self, guint row, guint col) {
+                g_return_val_if_fail(row < self->_priv->rows, GTK_OXO_WIDGET_VALUE_EMPTY);
+                g_return_val_if_fail(col < self->_priv->cols, GTK_OXO_WIDGET_VALUE_EMPTY);
+
+                return self->_priv->values[row][col];
+        }
+
+        private gboolean check_winning_move(self, guint row, guint col) {
+                GtkOxoWidgetValue tofind = GTK_OXO_WIDGET_VALUE_EMPTY;
+                GtkOxoWidgetValue newvalue = self_get_field_value(self, row, col);
+                gint dr = 0, dc = 0;
+
+                g_return_val_if_fail(row < self->_priv->rows, FALSE);
+                g_return_val_if_fail(col < self->_priv->cols, FALSE);
+
+                switch(newvalue) {
+                        case GTK_OXO_WIDGET_VALUE_X:
+                                tofind = GTK_OXO_WIDGET_VALUE_O;
+                                break;
+                        case GTK_OXO_WIDGET_VALUE_O:
+                                tofind = GTK_OXO_WIDGET_VALUE_X;
+                                break;
+                        default:
+                                return FALSE;
+                }
+
+                for(dr = -1; dr < 2; dr++) {
+                        if(CHECK_IN_RANGE(row + dr, 0, self->_priv->rows - 1)) {
+                                for(dc = -1; dc < 2; dc++) {
+                                        if(CHECK_IN_RANGE(col + dc, 0, self->_priv->cols - 1)) {
+                                                if(self_get_field_value(self, row + dr, col + dc) == tofind) {
+                                                        if(CHECK_IN_RANGE(row + 2 * dr, 0, self->_priv->rows - 1) && CHECK_IN_RANGE(col + 2 * dc, 0, self->_priv->cols - 1) && self_get_field_value(self, row + 2 * dr, col + 2 * dc) == newvalue) {
+                                                               return TRUE;
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                }
+
+                return FALSE;
+        }
+
+        signal first NONE (NONE)
+        void winner(self) {}
+
+        signal first NONE (INT, INT)
+        void move(self, guint row, guint col) {}
+
+        signal first NONE (INT, INT)
+        void invalid_move(self, guint row, guint col) {}
+}

@@ -1,0 +1,82 @@
+Desktop Abstraction Layer (DAL) Overview
+----------------------------------------
+1. Overview
+
+The DAL is an attempt to unify and standardize communication between different
+desktop applications, regardless of there background: plain X apps, Gnome/GTK
+based applications or KDE/Qt based ones should be able to talk to each other
+easily, to enhance the whole desktop experience of the user.
+
+This standardization process will be coordinated by a group of developers at
+freedesktop.org. The development process will be open to comments, requires
+etc from different sources.
+
+The project consists of 2 parts: writing and maintaining the standard
+interfaces applications should comply to, and libraries to ease the
+implementation of the spec in existing and newly-written apps.
+
+The technical implementation of DAL should be based on open, free standards,
+not bound to a specific desktop environment. At the moment, DBUS [1] seems
+best suited for this task.
+
+
+
+2. Goals
+
+Initially, DAL should be a system that allows applications to request
+information from others, and signalize events.
+Later on, there could be some more "activity", where one application can tell
+another one "do this", or make requests to a group of applications. An example
+of this is a VoIP/VideoChat application like GnomeMeeting that requests all
+media player apps to pause playback. One problem to solve here: should this be
+"pushed" or "pulled", i.e. should GnomeMeeting request all mediaplayers to
+pause playback, or should it just emit a signal there's an incoming call, and
+should mediaplayers be so intelligent to pause themselves?
+
+
+
+3. Implementation
+
+DAL should mainly consist of the well-known interfaces we define. These
+interface define the namespace of the generated DBUS messages, and the
+parameters carried with them.
+There are 2 types of messages (TODO: maybe more?):
+- Event signals.
+        This type of messages are triggered by an application when something
+        "inside" the application happens. Examples of this:
+        "ApplicationStarted", "EmailReceived", "BuddyLoggedIn",
+        "BuddyLoggedOut","NewTrackStarted",... Each of them with some specific 
+        additional parameters.
+- Information requests
+        This is a type of message sent by an application on the bus,
+        requesting information from applications that can give it. An example
+        of this is "WhoIsPlayingMusic" (just a stupid sample). If a media
+        player receives an information request like this, it can send out a
+        signal "PlayingMusic (String path_to_file)". (TODO: find more
+        samples).
+
+The information given (DBUS Iter members) follows some strict rules. As an
+example, we could state paths should be returned following the fdo File URI
+spec [2].
+
+
+4. Initial steps
+
+- Get in touch with the XMMS2 and Evo2.1 hackers, because they're already
+using DBUS for desktop-wide communication
+- Figure out a new, final name for this
+- Get some Wiki page on fdo
+- Write some simple client library
+- As a proof of concept, write a simple interface for something, and patch
+some existing apps so they start using the DAL lib and start communicating
+
+I'll keep working on my initial example for now: let xscreensaver send out
+DBUS events (using DAL), even thought the xscreensaver maintainer doesn't like
+this, complete the Gaim plugin (too hard to get inside the Gaim core for now),
+maybe patch up some media player to pause playback when a screensaver is
+started,...
+
+
+
+[1] http://freedesktop.org/wiki/Software_2fdbus
+[2] http://freedesktop.org/wiki/Standards_2ffile_2duri_2dspec

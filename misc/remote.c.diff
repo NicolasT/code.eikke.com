@@ -1,0 +1,73 @@
+--- gaim-remote.old/remote.c	2005-01-20 11:37:06.747882944 +0100
++++ gaim-remote/remote.c	2005-01-20 14:59:16.640858920 +0100
+@@ -61,6 +61,56 @@
+ static int gaim_session = 0;
+ static GSList *uis = NULL;
+ 
++static const char *
++gaim_remote_handle_new_convo(const char *buddy)
++{
++        GaimConvWindow *win;
++        GaimConversation *conv;
++        GList *accounts;
++        GaimAccount *account = NULL;
++        GList *curr;
++        gboolean found;
++
++        buddy += 4;
++        /*
++        * If we already have an open conversation with this buddy, then
++        * just move the conv to this window.  Otherwise, create a new
++        * conv and add it to this window.
++        */
++        conv = gaim_find_conversation(buddy);
++        if (conv != NULL) {
++                win = gaim_conversation_get_window(conv);
++                gaim_conv_window_raise(win);
++                return NULL;
++        }
++
++        accounts = gaim_accounts_get_all();
++        curr = g_list_first(accounts);
++        found = FALSE;
++        while(found == FALSE && curr != NULL) {
++                GaimBuddy *b = NULL;
++                
++                account = (GaimAccount *)curr->data;
++                g_printf("Checking account %s\n", account->username);
++                b = gaim_find_buddy(account, buddy);
++                if(b != NULL) {
++                        found = TRUE;
++                } else {
++                        curr = g_list_next(curr);
++                }
++        }
++        
++        if(found == FALSE || account == NULL)
++                return "No account found";
++        
++        conv = gaim_conversation_new(GAIM_CONV_IM, account, buddy);
++        if(conv == NULL)
++                return "Unable to create conversation";
++        win = gaim_conv_window_new();
++        gaim_conv_window_add_conversation(win, conv);
++        gaim_conv_window_show(win);
++}
++
+ /* AIM URI's ARE FUN :-D */
+ static const char *
+ gaim_remote_handle_uri(const char *uri)
+@@ -496,6 +546,13 @@
+ 	const char *resp;
+ 	char *send;
+ 	switch (subtype) {
++        case CUI_REMOTE_NEW_CONVO:
++                send = g_malloc(len + 1);
++                memcpy(send, data, len);
++                send[len] = 0;
++                resp = gaim_remote_handle_new_convo(send);
++                g_free(send);
++                break;
+ 	case CUI_REMOTE_CONNECTIONS:
+ 		break;
+ 	case CUI_REMOTE_URI:

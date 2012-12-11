@@ -1,0 +1,188 @@
+diff -r -u /tmp/xs/xscreensaver-4.19/config.h.in xscreensaver-4.19-dbus/config.h.in
+--- /tmp/xs/xscreensaver-4.19/config.h.in	2004-10-23 03:15:01.000000000 +0200
++++ xscreensaver-4.19-dbus/config.h.in	2005-01-08 21:54:10.830345680 +0100
+@@ -448,3 +448,11 @@
+ /* Define this if you want to build with NLS support
+  */
+ #undef ENABLE_NLS
++
++/* Define this if you want to build with DBUS support
++ */
++#undef ENABLE_DBUS
++
++/* Necessary for DBUS
++ */
++#undef DBUS_API_SUBJECT_TO_CHANGE
+Only in /tmp/xs/xscreensaver-4.19/: configure
+diff -r -u /tmp/xs/xscreensaver-4.19/configure.in xscreensaver-4.19-dbus/configure.in
+--- /tmp/xs/xscreensaver-4.19/configure.in	2004-10-26 00:24:47.000000000 +0200
++++ xscreensaver-4.19-dbus/configure.in	2005-01-08 21:58:30.098930864 +0100
+@@ -1553,6 +1553,30 @@
+ 
+ ###############################################################################
+ #
++#       The --enable-dbus option
++#
++###############################################################################
++
++AC_ARG_ENABLE(dbus,[
++DBUS options:
++                  
++  --enable-dbus           Compile in support for DBUS event messages.
++  --disable-dbus          Do not allow DBUS event messages.],
++  [enable_dbus="$enableval"],[enable_dbus=no])
++if test "$enable_dbus" = yes; then
++  PKG_CHECK_MODULES(DBUS, dbus-1 >= 0.20 , have_dbus=true, have_dbus=false)
++  if test "x$have_dbus" = "xfalse" ; then
++    AC_MSG_ERROR([Dbus was not found, check config.log for failed attempts])
++  fi
++  AC_SUBST(DBUS_CFLAGS)
++  AC_SUBST(DBUS_LIBS)
++  AC_DEFINE(ENABLE_DBUS,[],[Whether we want DBUS support])
++  AC_DEFINE(DBUS_API_SUBJECT_TO_CHANGE,[],[Necessary for DBUS for now...])
++fi
++            
++
++###############################################################################
++#
+ #       The --enable-vt-locking option
+ #
+ ###############################################################################
+diff -r -u /tmp/xs/xscreensaver-4.19/driver/Makefile.in xscreensaver-4.19-dbus/driver/Makefile.in
+--- /tmp/xs/xscreensaver-4.19/driver/Makefile.in	2004-12-16 13:34:37.000000000 +0100
++++ xscreensaver-4.19-dbus/driver/Makefile.in	2005-01-08 21:52:43.639600688 +0100
+@@ -49,6 +49,7 @@
+ INTL_LIBS	= @INTLLIBS@
+ JPEG_LIBS	= @JPEG_LIBS@
+ PERL		= @PERL@
++DBUS_LIBS	= @DBUS_LIBS@
+ 
+ DEPEND		= @DEPEND@
+ DEPEND_FLAGS	= @DEPEND_FLAGS@
+@@ -69,6 +70,7 @@
+ X_EXTRA_LIBS	= @X_EXTRA_LIBS@
+ XMU_LIBS	= @XMU_LIBS@
+ XPM_LIBS	= @XPM_LIBS@
++DBUS_CFLAGS	= @DBUS_CFLAGS@
+ 
+ # Note:
+ #
+@@ -863,6 +865,10 @@
+ 	$(CC) -c $(INCLUDES) $(CONF_DEFS) $(GTK_DEFS) $(CFLAGS) $(X_CFLAGS) \
+ 	  $(srcdir)/demo-Gtk-conf.c
+ 
++# windows takes extra DBUS cflags.
++windows.o: windows.c
++	$(CC) -c $(INCLUDES) $(CONF_DEFS) $(GTK_DEFS) $(CFLAGS) $(X_CFLAGS) $(DBUS_CFLAGS) \
++          $(srcdir)/windows.c
+ 
+ # How we build the default app-defaults file into the program.
+ #
+@@ -874,7 +880,7 @@
+ # The executables linked in this directory.
+ #
+ xscreensaver: $(SAVER_OBJS)
+-	$(CC) $(LDFLAGS) -o $@ $(SAVER_OBJS) $(SAVER_LIBS)
++	$(CC) $(LDFLAGS) -o $@ $(SAVER_OBJS) $(SAVER_LIBS) $(DBUS_LIBS)
+ 
+ xscreensaver-command: $(CMD_OBJS)
+ 	$(CC) $(LDFLAGS) -o $@ $(CMD_OBJS) $(CMD_LIBS)
+Only in /tmp/xs/xscreensaver-4.19/driver: XScreenSaver_ad.h
+diff -r -u /tmp/xs/xscreensaver-4.19/driver/windows.c xscreensaver-4.19-dbus/driver/windows.c
+--- /tmp/xs/xscreensaver-4.19/driver/windows.c	2004-08-14 06:05:32.000000000 +0200
++++ xscreensaver-4.19-dbus/driver/windows.c	2005-01-08 22:30:55.847132176 +0100
+@@ -63,6 +63,16 @@
+ #include "visual.h"
+ #include "fade.h"
+ 
++/* Include DBUS stuff */
++#ifdef ENABLE_DBUS
++# include <dbus/dbus.h>
++# define DBUSPATH       "/org/jwz/XScreensaver"
++# define DBUSURI        "org.jwz.XScreensaver"
++# define DBUSDOMAIN     "org.jwz"
++# define DBUSMESSAGE_STARTED    "ScreensaverStarted"
++# define DBUSMESSAGE_STOPPED    "ScreensaverStopped"
++#endif
++
+ 
+ extern int kill (pid_t, int);		/* signal() is in sys/signal.h... */
+ 
+@@ -82,6 +92,55 @@
+ 	 Button1MotionMask | Button2MotionMask | Button3MotionMask | \
+ 	 Button4MotionMask | Button5MotionMask | ButtonMotionMask)
+ 
++#ifdef ENABLE_DBUS
++
++static void sendDbusMessage(const char *message)
++{
++  DBusConnection *dbusConnection;
++  DBusError dbusError;
++  DBusMessage *dbusMessage;
++
++  dbus_error_init(&dbusError);
++
++  dbusConnection = dbus_bus_get(DBUS_BUS_SESSION, &dbusError);
++  if (dbusConnection == NULL) {
++    fprintf(stderr, "[DBUS] Cannot connect to session message bus: error (%s): %s\n", dbusError.name, dbusError.message);
++    dbus_error_free(&dbusError);
++    return;
++  }
++
++  dbus_bus_acquire_service(dbusConnection, DBUSDOMAIN, 0, &dbusError);
++  if (dbus_error_is_set(&dbusError)) {
++    fprintf(stderr, "[DBUS] Cannot acquire " DBUSDOMAIN " service, error (%s): %s\n", dbusError.name, dbusError.message);
++    goto end;
++  }
++
++  /* Send message */
++  if (dbus_connection_get_is_connected(dbusConnection)) {
++    /* Connection is ok, we can send out a message */
++    dbusMessage = dbus_message_new_signal(DBUSPATH, DBUSURI, message);
++    if (dbusMessage == NULL) {
++      fprintf(stderr, "[DBUS] Error creating DBUS message.\n");
++      goto end;
++    }
++
++    if (dbusMessage == NULL) {
++      fprintf(stderr, "[DBUS] Error creating DBUS message.\n");
++      goto end;
++    }
++    
++    if (!dbus_connection_send(dbusConnection, dbusMessage, NULL))
++      fprintf(stderr, "[DBUS] Error sending DBUS message.\n");
++    dbus_message_unref(dbusMessage);
++    dbus_connection_flush(dbusConnection);
++  }
++
++end:
++  dbus_connection_disconnect(dbusConnection);
++  dbus_error_free(&dbusError);
++}
++
++#endif /* ifdef ENABLE_DBUS */
+ 
+ static const char *
+ grab_string(int status)
+@@ -1897,6 +1956,10 @@
+   si->blank_time = time ((time_t) 0);
+   si->last_wall_clock_time = 0;
+ 
++#ifdef ENABLE_DBUS
++    sendDbusMessage(DBUSMESSAGE_STARTED);
++#endif
++
+   store_saver_status (si);  /* store blank time */
+ 
+   return True;
+@@ -2019,6 +2082,10 @@
+   si->blank_time = time ((time_t) 0);
+   si->last_wall_clock_time = 0;
+ 
++#ifdef ENABLE_DBUS
++  sendDbusMessage(DBUSMESSAGE_STOPPED);
++#endif
++
+   store_saver_status (si);  /* store unblank time */
+ }
+ 

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="DesktopService.xsl" type="text/xsl"?>
+<!--
+Comments
+********
+- We *do* need ID's for Arguments and Returned Values, because XML has no "order" by itself
+-->
+<dis:DesktopService dis:name="MusicPlayer" xmlns:dis="http://www.freedesktop.org/Standards/DIS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.freedesktop.org/Standards/DIS DesktopService.xsd">
+        <dis:Description>Interface for a Music Player</dis:Description>
+        <dis:Interface>org.freedesktop.DIS.MusicPlayer</dis:Interface>
+        <dis:ExposedEvents>
+                <dis:Event dis:name="NewTrackStarted">
+                        <dis:Description>A new track started playing</dis:Description>
+                        <dis:Arguments>
+                                <dis:Argument dis:id="1" dis:name="Uri">
+                                        <dis:Type>String</dis:Type>
+                                        <dis:Description>The URI of the newly started track, compatible with the FDO File URI specification</dis:Description>
+                                </dis:Argument>
+                        </dis:Arguments>
+                </dis:Event>
+                <dis:Event dis:name="PlaybackPaused">
+                        <dis:Description>Playback paused</dis:Description>
+                        <dis:Arguments />
+                </dis:Event>
+                <dis:Event dis:name="PlaybackStarted">
+                        <dis:Description>Playback started or restarted</dis:Description>
+                        <dis:Arguments />
+                </dis:Event>
+        </dis:ExposedEvents>
+        <dis:ExposedMethods>
+                <dis:Method dis:name="HandleUri">
+                        <dis:Description>Check whether the player can handle this URI</dis:Description>
+                        <dis:Arguments>
+                                <dis:Argument dis:id="1" dis:name="Uri">
+                                        <dis:Type>String</dis:Type>
+                                        <dis:Description>FDO File URI spec compatible URI</dis:Description>
+                                </dis:Argument>
+                        </dis:Arguments>
+                        <dis:ReturnValues>
+                                <dis:ReturnValue dis:id="1" dis:name="Handles">
+                                        <dis:Type>Bool</dis:Type>
+                                        <dis:Description>Whether the player can handle the requested URI</dis:Description>
+                                </dis:ReturnValue>
+                        </dis:ReturnValues>
+                </dis:Method>
+                <dis:Method dis:name="SetCurrentTrackUri">
+                        <dis:Description>Request the player to start playing URI</dis:Description>
+                        <dis:Arguments>
+                                <dis:Argument dis:id="1" dis:name="Uri">
+                                        <dis:Type>String</dis:Type>
+                                        <dis:Description>The URI</dis:Description>
+                                </dis:Argument>
+                        </dis:Arguments>
+                        <dis:ReturnValues>
+                                <dis:ReturnValue dis:id="1" dis:name="Success">
+                                        <dis:Type>Bool</dis:Type>
+                                        <dis:Description>Whether the player could do what we asked</dis:Description>
+                                </dis:ReturnValue>
+                        </dis:ReturnValues>
+                </dis:Method>
+                <dis:Method dis:name="PausePlayback">
+                        <dis:Description>Request the player to pause playback</dis:Description>
+                        <dis:Arguments />
+                        <dis:ReturnValues>
+                                <dis:ReturnValue dis:id="1" dis:name="Success">
+                                        <dis:Type>Bool</dis:Type>
+                                        <dis:Description>Whether the player was able to honour our request</dis:Description>
+                                </dis:ReturnValue>
+                        </dis:ReturnValues>
+                </dis:Method>
+                <dis:Method dis:name="StartPlayback">
+                        <dis:Description>Request the player to resume playback when in paused state</dis:Description>
+                        <dis:Arguments />
+                        <dis:ReturnValues>
+                                <dis:ReturnValue dis:id="1" dis:name="Success">
+                                        <dis:Type>Bool</dis:Type>
+                                        <dis:Description>Same thing</dis:Description>
+                                </dis:ReturnValue>
+                        </dis:ReturnValues>
+                </dis:Method>
+                <dis:Method dis:name="GetCurrentTrackUri">
+                        <dis:Description>Request the URI of the track currently "on the turntable"</dis:Description>
+                        <dis:Arguments />
+                        <dis:ReturnValues>
+                                <dis:ReturnValue dis:id="1" dis:name="Uri">
+                                        <dis:Type>String</dis:Type>
+                                        <dis:Description>URI of the track currently loaded</dis:Description>
+                                </dis:ReturnValue>
+                        </dis:ReturnValues>
+                </dis:Method>
+        </dis:ExposedMethods>
+</dis:DesktopService>

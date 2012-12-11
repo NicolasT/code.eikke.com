@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
+<article id="makefilesandautotools" lang="en">
+        <articleinfo>
+                <title>Introduction to Makefiles and Autotools</title>
+                <releaseinfo>Version 0.1</releaseinfo>
+                <date>7 February 2005</date>
+                <author><firstname>Ikke</firstname></author>
+                <copyright>
+                        <year>2005</year>
+                        <holder>Ikke</holder>
+                </copyright>
+                <legalnotice><para>Published under the "Creative Commons Attribution-ShareAlike License Belgium"</para></legalnotice>
+        </articleinfo>
+        <section id="prerequisites">
+                <title>test</title>
+                <para>Before you can get started, there are some thing you need:
+                <itemizedlist>
+                        <listitem><para>The files used in my previous article, "Using Glib Signals with GOB"</para></listitem>
+                        <listitem><para>A decent editor, I'm addicted to <ulink url="http://www.vim.org">Vim</ulink></para></listitem>
+                        <listitem><para>A GNU Make-compatible make-implementation, like GNU Make itself</para></listitem>
+                        <listitem><para>If you're willing to play with autotools, you need GNU AutoMake and AutoConf</para></listitem>
+                </itemizedlist></para>
+        </section>
+</article>

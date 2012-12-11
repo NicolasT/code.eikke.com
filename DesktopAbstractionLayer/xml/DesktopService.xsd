@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.freedesktop.org/Standards/DIS" xmlns="http://www.freedesktop.org/Standards/DIS" elementFormDefault="qualified">
+
+<!-- Both Argument and ReturnValue have the same syntax -->
+<xsd:complexType name="MethodValue">
+        <xsd:sequence>
+                <xsd:element name="Type" type="Type" />
+                <xsd:element name="Description" type="xsd:string" />
+        </xsd:sequence>
+        <xsd:attribute name="id" type="xsd:positiveInteger" use="required" form="qualified" />
+        <xsd:attribute name="name" type="xsd:string" use="required" form="qualified" />
+</xsd:complexType>
+
+<xsd:simpleType name="Type">
+        <xsd:restriction base="xsd:string">
+                <xsd:enumeration value="Bool" />
+                <xsd:enumeration value="String" />
+                <xsd:enumeration value="Integer" />
+        </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:complexType name="Arguments">
+        <xsd:sequence>
+                <xsd:element name="Argument" type="MethodValue" maxOccurs="unbounded" minOccurs="0" />
+        </xsd:sequence>
+</xsd:complexType>
+<xsd:complexType name="ReturnValues">
+        <xsd:sequence>
+                <xsd:element name="ReturnValue" type="MethodValue" maxOccurs="unbounded" minOccurs="0" />
+        </xsd:sequence>
+</xsd:complexType>
+
+<xsd:complexType name="Method">
+        <xsd:sequence>
+                <xsd:element name="Description" type="xsd:string" />
+                <xsd:element name="Arguments" type="Arguments" />
+                <xsd:element name="ReturnValues" type="ReturnValues" />
+        </xsd:sequence>
+        <xsd:attribute name="name" type="xsd:string" use="required" form="qualified" />
+</xsd:complexType>
+<xsd:complexType name="Event">
+        <xsd:sequence>
+                <xsd:element name="Description" type="xsd:string" />
+                <xsd:element name="Arguments" type="Arguments" />
+        </xsd:sequence>
+        <xsd:attribute name="name" type="xsd:string" use="required" form="qualified" />
+</xsd:complexType>
+
+<xsd:complexType name="ExposedEvents">
+        <xsd:sequence>
+                <xsd:element name="Event" type="Event" maxOccurs="unbounded" />
+        </xsd:sequence>
+</xsd:complexType>
+<xsd:complexType name="ExposedMethods">
+        <xsd:sequence>
+                <xsd:element name="Method" type="Method" maxOccurs="unbounded" />
+        </xsd:sequence>
+</xsd:complexType>
+
+<xsd:complexType name="DesktopService">
+        <xsd:sequence>
+                <xsd:element name="Description" type="xsd:string" />
+                <xsd:element name="Interface" type="xsd:string" />
+                <xsd:element name="ExposedEvents" type="ExposedEvents" />
+                <xsd:element name="ExposedMethods" type="ExposedMethods" />
+        </xsd:sequence>
+        <xsd:attribute name="name" type="xsd:string" use="required" form="qualified" />
+</xsd:complexType>
+
+<xsd:element name="DesktopService" type="DesktopService" />
+</xsd:schema>

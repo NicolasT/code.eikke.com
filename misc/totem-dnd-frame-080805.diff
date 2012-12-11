@@ -1,0 +1,215 @@
+? totem-dnd-frame-080105.diff
+? totem-dnd-frame-080805.diff
+Index: ChangeLog
+===================================================================
+RCS file: /cvs/gnome/totem/ChangeLog,v
+retrieving revision 1.1422
+diff -u -b -B -r1.1422 ChangeLog
+--- ChangeLog	8 Aug 2005 17:57:37 -0000	1.1422
++++ ChangeLog	8 Aug 2005 18:32:56 -0000
+@@ -110,6 +110,11 @@
+ 	to have the sidebar smaller than the addition of the requisition
+ 	from its children (Closes: #310603)
+ 
++2005-08-01  Nicolas Trangez  <eikke@eikke.com>
++
++	* src/totem.c: src/totem-private.h:
++	DnD of frames to a jpeg file, needs love
++
+ 2005-07-31  Bastien Nocera  <hadess@hadess.net>
+ 
+ 	* data/totem.1: Fix typo (spotted by A Costa <agcosta@gis.net>)
+Index: src/totem-private.h
+===================================================================
+RCS file: /cvs/gnome/totem/src/totem-private.h,v
+retrieving revision 1.34
+diff -u -b -B -r1.34 totem-private.h
+--- src/totem-private.h	24 Jul 2005 13:40:53 -0000	1.34
++++ src/totem-private.h	8 Aug 2005 18:32:56 -0000
+@@ -145,6 +145,10 @@
+ 	TotemRemote *remote;
+ 	BaconMessageConnection *conn;
+ 	TotemStates state;
++
++        /* DnD screenshot stuff */
++        GdkPixbuf *curr_scrnshot;
++        gchar *scrnshot_location;
+ };
+ 
+ GtkWidget *totem_volume_create (void);
+Index: src/totem.c
+===================================================================
+RCS file: /cvs/gnome/totem/src/totem.c,v
+retrieving revision 1.455
+diff -u -b -B -r1.455 totem.c
+--- src/totem.c	3 Aug 2005 18:08:04 -0000	1.455
++++ src/totem.c	8 Aug 2005 18:33:00 -0000
+@@ -102,6 +102,10 @@
+ 	{ "text/uri-list", 0, 0 },
+ };
+ 
++static GtkTargetEntry drag_types[] = {
++        { "text/uri-list", 0, 0},
++};
++
+ static gboolean totem_action_open_files (Totem *totem, char **list);
+ static gboolean totem_action_open_files_list (Totem *totem, GSList *list);
+ static void update_fullscreen_size (Totem *totem);
+@@ -2779,6 +2783,113 @@
+ }
+ 
+ static void
++on_dnd_start_event (GtkWidget *widget, GdkDragContext *context, gpointer user_data)
++{
++        GdkPixbuf *pixbuf = NULL;
++        GdkPixbuf *privpb = NULL;
++        GError *err = NULL;
++        Totem *totem = NULL;
++
++        totem = (Totem *) user_data;
++        g_assert(totem != NULL);
++        
++        g_debug ("DND start");
++        /* Save frame to buffer, set icon */
++        if (bacon_video_widget_can_get_frames (totem->bvw, &err) == FALSE) {
++                if (err == NULL) {
++                        return;
++                }
++                totem_action_error (_("Totem could not get a screenshot of that film."),
++                                err->message,
++                                totem);
++                g_error_free (err);
++                return;
++        }
++        pixbuf = bacon_video_widget_get_current_frame (totem->bvw);
++        if (pixbuf == NULL)
++        {
++                totem_action_error (_("Totem could not get a screenshot of that film."),
++                                _("This is not supposed to happen; please file a bug report."),
++                                totem);
++                return;
++        }
++
++        privpb = gdk_pixbuf_copy(pixbuf);
++        g_assert(privpb != NULL);
++        gtk_drag_set_icon_pixbuf (context,
++                        privpb,
++                        0,
++                        0);
++
++        if(totem->curr_scrnshot != NULL)
++                g_object_unref(G_OBJECT(totem->curr_scrnshot));
++        totem->curr_scrnshot = privpb;
++        g_object_unref (G_OBJECT (pixbuf));
++        g_debug("End of handler");
++}
++
++static void
++on_dnd_end_event (GtkWidget *widget, GdkDragContext *context, gpointer user_data)
++{
++        g_debug ("DND end");
++        /* Do nothing */
++}
++
++static void
++on_dnd_data_get_event (GtkWidget *widget, GdkDragContext *context, GtkSelectionData *selection_data, guint target_type, guint time, gpointer user_data) 
++{
++        gint fd = 0;
++        gchar *path = NULL;
++        GdkPixbuf *pixbuf = NULL;
++        gchar *data = NULL;
++
++        pixbuf = ((Totem *) user_data)->curr_scrnshot;
++        
++        g_debug ("DND data get");
++        /* Return URI to file */
++        fd = g_file_open_tmp ("totem-shot.jpg.XXXXXX", &path, NULL);
++        close (fd);
++        g_debug ("Storing image to %s", path);
++        gdk_pixbuf_save (pixbuf , path, "jpeg", NULL, "quality", "100", NULL);
++        
++        data = g_strdup_printf ("file:%s\r\n", path);
++        g_debug("End path is %s", data);
++
++        if(((Totem *) user_data)->scrnshot_location != NULL) {
++                g_free(((Totem *) user_data)->scrnshot_location);
++                ((Totem *) user_data)->scrnshot_location = NULL;
++        }
++        
++        ((Totem *) user_data)->scrnshot_location = g_strdup(path);
++        gtk_selection_data_set (selection_data,
++				selection_data->target,
++				8,
++                                data,
++                                strlen (data)+1);
++        
++        g_free(path);
++        g_free(data);
++        g_object_unref(G_OBJECT (pixbuf));
++}
++
++static void
++on_dnd_data_delete_event (GtkWidget *widget, GdkDragContext *context, gpointer user_data)
++{
++        Totem *totem = NULL;
++        
++        g_debug("DND Delete");
++        /* Remove temp file */
++        totem = (Totem *) user_data;
++
++        if(totem->scrnshot_location != NULL && g_file_test(totem->scrnshot_location, G_FILE_TEST_EXISTS) == TRUE)
++                g_remove(totem->scrnshot_location);
++        if(totem->scrnshot_location != NULL)
++                g_free(totem->scrnshot_location);
++        if(totem->curr_scrnshot != NULL)
++                g_object_unref(G_OBJECT(totem->curr_scrnshot));
++}
++
++static void
+ update_media_menu_items (Totem *totem)
+ {
+         gboolean playing;
+@@ -3274,6 +3385,28 @@
+ 			"speed-warning",
+ 			G_CALLBACK (on_speed_warning_event),
+ 			totem);
++        /* DnD stuff */
++        gtk_drag_source_set (GTK_WIDGET (totem->bvw),
++                        GDK_BUTTON1_MASK,
++                        drag_types,
++                        G_N_ELEMENTS (drag_types),
++                        GDK_ACTION_COPY);
++        g_signal_connect (G_OBJECT (totem->bvw),
++                        "drag-begin",
++                        G_CALLBACK (on_dnd_start_event),
++                        totem);
++        g_signal_connect (G_OBJECT (totem->bvw),
++                        "drag-end",
++                        G_CALLBACK (on_dnd_end_event),
++                        totem);
++        g_signal_connect (G_OBJECT (totem->bvw),
++                        "drag-data-get",
++                        G_CALLBACK (on_dnd_data_get_event),
++                        totem);
++        g_signal_connect (G_OBJECT (totem->bvw),
++                        "drag-data-delete",
++                        G_CALLBACK (on_dnd_data_delete_event),
++                        totem);
+ 
+ 	container = glade_xml_get_widget (totem->xml, "tmw_bvw_vbox");
+ 	gtk_container_add (GTK_CONTAINER (container),
+@@ -3290,12 +3423,12 @@
+ 			target_table, G_N_ELEMENTS (target_table),
+ 			GDK_ACTION_COPY | GDK_ACTION_MOVE);
+ 
+-	g_signal_connect (G_OBJECT (totem->bvw), "drag_data_get",
++/*	g_signal_connect (G_OBJECT (totem->bvw), "drag_data_get",
+ 			G_CALLBACK (drag_video_cb), totem);
+ 	gtk_drag_source_set (GTK_WIDGET (totem->bvw),
+ 			GDK_BUTTON1_MASK | GDK_BUTTON3_MASK,
+ 			source_table, G_N_ELEMENTS (source_table),
+-			GDK_ACTION_LINK);
++			GDK_ACTION_LINK);*/
+ 
+ 	g_object_add_weak_pointer (G_OBJECT (totem->bvw),
+ 			(void**)&(totem->bvw));

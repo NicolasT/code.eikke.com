@@ -1,0 +1,953 @@
+Index: configure-test.c
+===================================================================
+--- configure-test.c	(revision 0)
++++ configure-test.c	(revision 0)
+@@ -0,0 +1,3 @@
++int main() {
++        return 0;
++}
+Index: avahi-dnsconfd/main.c
+===================================================================
+--- avahi-dnsconfd/main.c	(revision 286)
++++ avahi-dnsconfd/main.c	(working copy)
+@@ -224,11 +224,12 @@
+ 
+ static void run_script(gboolean new, gint interface, guchar protocol, const gchar *address) {
+     gchar *p;
+-    g_assert(interface > 0);
+     gint ret;
+     gchar ia[16], pa[16];
+     gchar name[IFNAMSIZ+1];
+ 
++    g_assert(interface > 0);
++
+     if (!getifname(interface, name, sizeof(name))) 
+         return;
+     
+Index: avahi-dnsconfd/Makefile.am
+===================================================================
+--- avahi-dnsconfd/Makefile.am	(revision 286)
++++ avahi-dnsconfd/Makefile.am	(working copy)
+@@ -36,6 +36,8 @@
+ # This cool debug trap works on i386/gcc only
+ AM_CFLAGS+='-DDEBUG_TRAP=__asm__("int $$3")'
+ 
++CFLAGS += -Wno-shadow
++
+ sbin_PROGRAMS = \
+ 	avahi-dnsconfd
+ 
+Index: avahi-utils/Makefile.am
+===================================================================
+--- avahi-utils/Makefile.am	(revision 286)
++++ avahi-utils/Makefile.am	(working copy)
+@@ -78,4 +78,5 @@
+ 	sed -e 's,@PYTHON\@,$(PYTHON),g' $< > $@
+ 	chmod +x $@
+ 
+-CLEANFILES = $(pythonscripts)
++CLEANFILES = $(pythonscripts) \
++	     $(desktop_DATA)
+Index: avahi-daemon/static-services.c
+===================================================================
+--- avahi-daemon/static-services.c	(revision 286)
++++ avahi-daemon/static-services.c	(working copy)
+@@ -166,7 +166,7 @@
+     g_free(g);
+ }
+ 
+-static void entry_group_callback(AvahiServer *s, AvahiEntryGroup *eg, AvahiEntryGroupState state, gpointer userdata) {
++static void entry_group_callback(AvahiServer *s, G_GNUC_UNUSED AvahiEntryGroup *eg, AvahiEntryGroupState state, gpointer userdata) {
+     StaticServiceGroup *g = userdata;
+     
+     g_assert(s);
+@@ -328,7 +328,7 @@
+     return;
+ }
+     
+-static void XMLCALL xml_end(void *data, const char *el) {
++static void XMLCALL xml_end(void *data, G_GNUC_UNUSED const char *el) {
+     struct xml_userdata *u = data;
+     g_assert(u);
+ 
+Index: avahi-daemon/main.c
+===================================================================
+--- avahi-daemon/main.c	(revision 286)
++++ avahi-daemon/main.c	(working copy)
+@@ -441,11 +441,11 @@
+     daemon_log(log_level_map[level], "%s", txt);
+ }
+ 
+-static void dump(const gchar *text, gpointer userdata) {
++static void dump(const gchar *text, G_GNUC_UNUSED gpointer userdata) {
+     avahi_log_info("%s", text);
+ }
+ 
+-static gboolean signal_callback(GIOChannel *source, GIOCondition condition, gpointer data) {
++static gboolean signal_callback(GIOChannel *source, G_GNUC_UNUSED GIOCondition condition, gpointer data) {
+     gint sig;
+     GMainLoop *loop = data;
+     
+@@ -691,7 +691,7 @@
+ 
+ int main(int argc, char *argv[]) {
+     gint r = 255;
+-    const gchar *argv0;
++    char *argv0;
+     gboolean wrote_pid_file = FALSE;
+ 
+     avahi_set_log_function(log_function);
+@@ -711,7 +711,7 @@
+         argv0 = argv[0];
+ 
+     daemon_pid_file_ident = (const char *) argv0;
+-    daemon_log_ident = (char*) argv0;
++    daemon_log_ident = argv0;
+     daemon_pid_file_proc = pid_file_proc;
+     
+     if (parse_command_line(&config, argc, argv) < 0)
+Index: avahi-daemon/Makefile.am
+===================================================================
+--- avahi-daemon/Makefile.am	(revision 286)
++++ avahi-daemon/Makefile.am	(working copy)
+@@ -83,6 +83,8 @@
+ 	introspect.xsl
+ 
+ if ENABLE_DBUS
++CFLAGS += -Wno-error
++
+ avahi_daemon_SOURCES += dbus-protocol.c dbus-protocol.h
+ 
+ dbusservice_DATA = avahi-dbus.conf
+Index: avahi-daemon/simple-protocol.c
+===================================================================
+--- avahi-daemon/simple-protocol.c	(revision 286)
++++ avahi-daemon/simple-protocol.c	(working copy)
+@@ -164,7 +164,7 @@
+ }
+ 
+ 
+-static void host_name_resolver_callback(AvahiHostNameResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *hostname, const AvahiAddress *a, gpointer userdata) {
++static void host_name_resolver_callback(G_GNUC_UNUSED AvahiHostNameResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiResolverEvent event, const gchar *hostname, const AvahiAddress *a, gpointer userdata) {
+     Client *c = userdata;
+     
+     g_assert(c);
+@@ -181,7 +181,7 @@
+     c->state = CLIENT_DEAD;
+ }
+ 
+-static void address_resolver_callback(AvahiAddressResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const AvahiAddress *a, const gchar *hostname, gpointer userdata) {
++static void address_resolver_callback(G_GNUC_UNUSED AvahiAddressResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiResolverEvent event, G_GNUC_UNUSED const AvahiAddress *a, const gchar *hostname, gpointer userdata) {
+     Client *c = userdata;
+     
+     
+@@ -195,7 +195,7 @@
+     c->state = CLIENT_DEAD;
+ }
+ 
+-static void dns_server_browser_callback(AvahiDNSServerBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *host_name, const AvahiAddress *a, guint16 port, gpointer userdata) {
++static void dns_server_browser_callback(G_GNUC_UNUSED AvahiDNSServerBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol, AvahiBrowserEvent event, G_GNUC_UNUSED const gchar *host_name, const AvahiAddress *a, guint16 port, gpointer userdata) {
+     Client *c = userdata;
+     gchar t[64];
+     
+@@ -378,7 +378,7 @@
+     return FALSE;
+ }
+ 
+-static gboolean dispatch_func(GSource *source, GSourceFunc callback, gpointer user_data) {
++static gboolean dispatch_func(GSource *source, G_GNUC_UNUSED GSourceFunc callback, G_GNUC_UNUSED gpointer user_data) {
+     Server *s = (Server*) source;
+     Client *c, *n;
+     
+Index: avahi-daemon/dbus-protocol.c
+===================================================================
+--- avahi-daemon/dbus-protocol.c	(revision 286)
++++ avahi-daemon/dbus-protocol.c	(working copy)
+@@ -443,7 +443,7 @@
+ 
+ }
+ 
+-static DBusHandlerResult msg_signal_filter_impl(DBusConnection *c, DBusMessage *m, void *userdata) {
++static DBusHandlerResult msg_signal_filter_impl(G_GNUC_UNUSED DBusConnection *c, DBusMessage *m, void *userdata) {
+     GMainLoop *loop = userdata;
+     DBusError error;
+ 
+@@ -593,14 +593,12 @@
+             goto fail;
+         }
+ 
+-        return respond_int32(c, m, (gint32) avahi_entry_group_get_state(i->entry_group));
++        return respond_int32(c, m, avahi_entry_group_get_state(i->entry_group));
+         
+     } else if (dbus_message_is_method_call(m, AVAHI_DBUS_INTERFACE_ENTRY_GROUP, "AddService")) {
+         gint32 interface, protocol;
+         gchar *type, *name, *domain, *host;
+         guint16 port;
+-        gchar **txt = NULL;
+-        gint txt_len;
+         AvahiStringList *strlst;
+         DBusMessageIter iter, sub;
+         int j;
+@@ -1083,7 +1081,7 @@
+     service_resolver_free(i);
+ }
+ 
+-static DBusHandlerResult msg_server_impl(DBusConnection *c, DBusMessage *m, void *userdata) {
++static DBusHandlerResult msg_server_impl(DBusConnection *c, DBusMessage *m, G_GNUC_UNUSED void *userdata) {
+     DBusError error;
+ 
+     dbus_error_init(&error);
+@@ -1139,7 +1137,7 @@
+             goto fail;
+         }
+ 
+-        return respond_int32(c, m, (gint32) avahi_server_get_state(avahi_server));
++        return respond_int32(c, m, avahi_server_get_state(avahi_server));
+ 
+     } else if (dbus_message_is_method_call(m, AVAHI_DBUS_INTERFACE_SERVER, "GetNetworkInterfaceNameByIndex")) {
+         gint32 idx;
+Index: avahi-discover-standalone/main.c
+===================================================================
+--- avahi-discover-standalone/main.c	(revision 286)
++++ avahi-discover-standalone/main.c	(working copy)
+@@ -112,7 +112,7 @@
+     g_free(s);
+ }
+ 
+-static void service_browser_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *service_name, const gchar *service_type, const gchar *domain_name, gpointer userdata) {
++static void service_browser_callback(G_GNUC_UNUSED AvahiServiceBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *service_name, const gchar *service_type, const gchar *domain_name, G_GNUC_UNUSED gpointer userdata) {
+ 
+     if (event == AVAHI_BROWSER_NEW) {
+         struct Service *s;
+@@ -154,7 +154,7 @@
+     }
+ }
+ 
+-static void service_type_browser_callback(AvahiServiceTypeBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *service_type, const gchar *domain, gpointer userdata) {
++static void service_type_browser_callback(G_GNUC_UNUSED AvahiServiceTypeBrowser *b, G_GNUC_UNUSED AvahiIfIndex interface, G_GNUC_UNUSED AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *service_type, const gchar *domain, G_GNUC_UNUSED gpointer userdata) {
+     struct ServiceType *st;
+     GtkTreePath *path;
+     GtkTreeIter iter;
+@@ -228,7 +228,7 @@
+ }
+ 
+ 
+-static void service_resolver_callback(AvahiServiceResolver *r, AvahiIfIndex interface, AvahiProtocol protocol, AvahiResolverEvent event, const gchar *name, const gchar *type, const gchar *domain, const gchar *host_name, const AvahiAddress *a, guint16 port, AvahiStringList *txt, gpointer userdata) {
++static void service_resolver_callback(AvahiServiceResolver *r, G_GNUC_UNUSED AvahiIfIndex interface, G_GNUC_UNUSED AvahiProtocol protocol, AvahiResolverEvent event, G_GNUC_UNUSED const gchar *name, G_GNUC_UNUSED const gchar *type, G_GNUC_UNUSED const gchar *domain, G_GNUC_UNUSED const gchar *host_name, const AvahiAddress *a, guint16 port, AvahiStringList *txt, gpointer userdata) {
+     struct Service *s;
+     g_assert(r);
+ 
+@@ -244,7 +244,7 @@
+         update_label(s, host_name, a, port, txt);
+ }
+ 
+-static void tree_view_on_cursor_changed(GtkTreeView *tv, gpointer userdata) {
++static void tree_view_on_cursor_changed(G_GNUC_UNUSED GtkTreeView *tv, G_GNUC_UNUSED gpointer userdata) {
+     struct Service *s;
+     
+     if (!(s = get_service_on_cursor()))
+@@ -258,7 +258,7 @@
+     service_resolver = avahi_service_resolver_new(server, s->interface, s->protocol, s->service_name, s->service_type->service_type, s->domain_name, AF_UNSPEC, service_resolver_callback, s);
+ }
+ 
+-static gboolean main_window_on_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
++static gboolean main_window_on_delete_event(G_GNUC_UNUSED GtkWidget *widget, G_GNUC_UNUSED GdkEvent *event, G_GNUC_UNUSED gpointer user_data) {
+     gtk_main_quit();
+     return FALSE;
+ }
+Index: avahi-discover-standalone/Makefile.am
+===================================================================
+--- avahi-discover-standalone/Makefile.am	(revision 286)
++++ avahi-discover-standalone/Makefile.am	(working copy)
+@@ -26,6 +26,8 @@
+ # This cool debug trap works on i386/gcc only
+ AM_CFLAGS+='-DDEBUG_TRAP=__asm__("int $$3")'
+ 
++CFLAGS += -Wno-error
++
+ if ENABLE_GTK
+ bin_PROGRAMS = \
+ 	avahi-discover-standalone
+Index: configure.ac
+===================================================================
+--- configure.ac	(revision 286)
++++ configure.ac	(working copy)
+@@ -180,12 +180,21 @@
+ AC_SUBST(LIBDAEMON_LIBS)
+ 
+ # If using GCC specify some additional parameters
++test_gcc_flag() {
++        ${CC} -c -o /dev/null $@ configure-test.c > /dev/null 2>&1
++        return $?
++}
++        
+ if test "x$GCC" = "xyes" ; then
+-   CFLAGS="$CFLAGS -pipe -W -Wall -pedantic"
+-
+-   AC_LANG_CONFTEST([int main() {}])
+-   $CC -c conftest.c -std=c99 -Wno-unused-parameter $CFLAGS > /dev/null 2> /dev/null && CFLAGS="$CFLAGS -std=c99 -Wno-unused-parameter"
+-   rm -f conftest.o
++# Leave out -pedantic for now as it breaks DBUS parts
++# -Wmissing-prototypes causes strange warning/errors, please someone fix this
++# -Wmissing-declarations too
++# Nicolas "Ikke" Trangez  <eikke eikke com>
++   DESIRED_FLAGS="-Wfoobar123 -pipe -std=c99 -pedantic -Werror -W -Wall -Wextra -Wfloat-equal -Wstrict-prototypes -Wredundant-decls -Wold-style-definition -Wmissing-noreturn -Wdeclaration-after-statement -Wshadow -Wendif-labels -Wlarger-than-4000 -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Winline"
++   for i in ${DESIRED_FLAGS};
++   do
++           test_gcc_flag "${i}" && CFLAGS="${CFLAGS} ${i}"
++   done
+ fi
+ 
+ #
+Index: avahi-client/client.c
+===================================================================
+--- avahi-client/client.c	(revision 286)
++++ avahi-client/client.c	(working copy)
+@@ -49,7 +49,7 @@
+ };
+ 
+ static DBusHandlerResult
+-filter_func (DBusConnection *bus, DBusMessage *message, void *data)
++filter_func (DBusConnection *bus, DBusMessage *message, G_GNUC_UNUSED void *data)
+ {
+     DBusError error;
+     
+@@ -88,8 +88,8 @@
+     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+ }
+ 
+-AvahiClient *
+-avahi_client_new ()
++AvahiClient* 
++avahi_client_new (void)
+ {
+     AvahiClient *tmp;
+     DBusError error;
+@@ -159,7 +159,7 @@
+ }
+ 
+ static char*
+-avahi_client_get_string_reply_and_block (AvahiClient *client, char *method, char *param)
++avahi_client_get_string_reply_and_block (AvahiClient *client, const char *method, char *param)
+ {
+     DBusMessage *message;
+     DBusMessage *reply;
+@@ -249,7 +249,4 @@
+     AVAHI_LLIST_PREPEND(AvahiEntryGroup, groups, client->groups, tmp);
+ 
+     return tmp;
+-fail:
+-    if (tmp) free (tmp);
+-    return NULL;
+ }
+Index: avahi-client/client.h
+===================================================================
+--- avahi-client/client.h	(revision 286)
++++ avahi-client/client.h	(working copy)
+@@ -35,7 +35,7 @@
+ typedef struct _AvahiEntryGroup AvahiEntryGroup;
+ 
+ /** Creates a new client instance */
+-AvahiClient* avahi_client_new ();
++AvahiClient* avahi_client_new (void);
+ 
+ /** Get the version of the server */
+ char* avahi_client_get_version_string (AvahiClient*);
+Index: avahi-client/Makefile.am
+===================================================================
+--- avahi-client/Makefile.am	(revision 286)
++++ avahi-client/Makefile.am	(working copy)
+@@ -28,6 +28,8 @@
+ 
+ if ENABLE_DBUS
+ 
++CFLAGS += -Wno-error
++
+ avahi_clientincludedir=$(includedir)/avahi-client
+ 
+ avahi_clientinclude_HEADERS = \
+Index: avahi-client/client-test.c
+===================================================================
+--- avahi-client/client-test.c	(revision 286)
++++ avahi-client/client-test.c	(working copy)
+@@ -24,7 +24,7 @@
+ #include <glib.h>
+ 
+ int
+-main (int argc, char *argv[])
++main (G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[])
+ {
+     GMainLoop *loop;
+     AvahiClient *avahi;
+Index: man/Makefile.am
+===================================================================
+--- man/Makefile.am	(revision 286)
++++ man/Makefile.am	(working copy)
+@@ -17,6 +17,8 @@
+ # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ # USA.
+ 
++if USE_XMLTOMAN
++
+ pkgsysconfdir=$(sysconfdir)/avahi
+ servicedir=$(pkgsysconfdir)/services
+ 
+@@ -131,8 +133,6 @@
+         -e 's,@PACKAGE_URL\@,$(PACKAGE_URL),g' $< > $@
+ 
+ 
+-if USE_XMLTOMAN
+-
+ CLEANFILES += $(man_MANS)
+ 
+ avahi-browse.1: avahi-browse.1.xml Makefile
+Index: examples/browse-services.c
+===================================================================
+--- examples/browse-services.c	(revision 286)
++++ examples/browse-services.c	(working copy)
+@@ -27,7 +27,7 @@
+ 
+ static GMainLoop *main_loop = NULL;
+ 
+-static void resolve_callback(AvahiServiceResolver *r, AvahiIfIndex interface, AvahiProtocol protocol, AvahiResolverEvent event, const gchar *name,const gchar *type,const gchar *domain, const gchar *host_name, const AvahiAddress *address, guint16 port, AvahiStringList *txt, gpointer userdata) {
++static void resolve_callback(AvahiServiceResolver *r, G_GNUC_UNUSED AvahiIfIndex interface, G_GNUC_UNUSED AvahiProtocol protocol, AvahiResolverEvent event, const gchar *name,const gchar *type,const gchar *domain, const gchar *host_name, const AvahiAddress *address, guint16 port, AvahiStringList *txt, G_GNUC_UNUSED gpointer userdata) {
+     g_assert(r);
+ 
+     /* Called whenever a service has been resolved successfully or timed out */
+@@ -51,10 +51,10 @@
+ }
+ 
+ static void browse_callback(AvahiServiceBrowser *b, AvahiIfIndex interface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *name, const gchar *type, const gchar *domain, gpointer userdata) {
+-    g_assert(b);
+-    
+     AvahiServer *s = userdata;
+ 
++    g_assert(b);
++
+     /* Called whenever a new services becomes available on the LAN or is removed from the LAN */
+ 
+     g_message("%s: service '%s' of type '%s' in domain '%s'",
+@@ -74,7 +74,7 @@
+             g_message("Failed to resolve service '%s': %s", name, avahi_strerror(avahi_server_errno(s)));
+ }
+ 
+-int main(int argc, char*argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char*argv[]) {
+     AvahiServerConfig config;
+     AvahiServer *server = NULL;
+     AvahiServiceBrowser *sb;
+Index: examples/publish-service.c
+===================================================================
+--- examples/publish-service.c	(revision 286)
++++ examples/publish-service.c	(working copy)
+@@ -35,7 +35,7 @@
+ 
+ static void create_services(AvahiServer *s);
+ 
+-static void entry_group_callback(AvahiServer *s, AvahiEntryGroup *g, AvahiEntryGroupState state, gpointer userdata) {
++static void entry_group_callback(AvahiServer *s, AvahiEntryGroup *g, AvahiEntryGroupState state, G_GNUC_UNUSED gpointer userdata) {
+     g_assert(s);
+     g_assert(g == group);
+ 
+@@ -103,7 +103,7 @@
+     return;
+ }
+ 
+-static void server_callback(AvahiServer *s, AvahiServerState state, gpointer userdata) {
++static void server_callback(AvahiServer *s, AvahiServerState state, G_GNUC_UNUSED gpointer userdata) {
+     g_assert(s);
+ 
+     /* Called whenever the server state changes */
+@@ -138,7 +138,7 @@
+     }
+ }
+ 
+-int main(int argc, char*argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char*argv[]) {
+     AvahiServerConfig config;
+     AvahiServer *server = NULL;
+     gint error;
+Index: avahi-common/strlst-test.c
+===================================================================
+--- avahi-common/strlst-test.c	(revision 286)
++++ avahi-common/strlst-test.c	(working copy)
+@@ -28,7 +28,7 @@
+ 
+ #include "strlst.h"
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+     gchar *t;
+     guint8 data[1024];
+     AvahiStringList *a = NULL, *b;
+Index: avahi-common/timeval-test.c
+===================================================================
+--- avahi-common/timeval-test.c	(revision 286)
++++ avahi-common/timeval-test.c	(working copy)
+@@ -1,6 +1,6 @@
+ #include "util.h"
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+ 
+     GTimeVal a = { 5, 5 }, b;
+ 
+Index: avahi-common/domain-test.c
+===================================================================
+--- avahi-common/domain-test.c	(revision 286)
++++ avahi-common/domain-test.c	(working copy)
+@@ -25,7 +25,7 @@
+ 
+ #include "util.h"
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+     gchar *s;
+     
+     g_message("host name: %s", s = avahi_get_host_name());
+Index: avahi-common/address.c
+===================================================================
+--- avahi-common/address.c	(revision 286)
++++ avahi-common/address.c	(working copy)
+@@ -51,11 +51,11 @@
+     return memcmp(a->data.data, b->data.data, avahi_address_get_size(a));
+ }
+ 
+-gchar *avahi_address_snprint(char *s, guint length, const AvahiAddress *a) {
++const gchar *avahi_address_snprint(char *s, guint length, const AvahiAddress *a) {
+     g_assert(s);
+     g_assert(length);
+     g_assert(a);
+-    return (gchar*) inet_ntop(a->family, a->data.data, s, length);
++    return (const gchar*) inet_ntop(a->family, a->data.data, s, length);
+ }
+ 
+ gchar* avahi_reverse_lookup_name_ipv4(const AvahiIPv4Address *a) {
+Index: avahi-common/address.h
+===================================================================
+--- avahi-common/address.h	(revision 286)
++++ avahi-common/address.h	(working copy)
+@@ -76,7 +76,7 @@
+ gint avahi_address_cmp(const AvahiAddress *a, const AvahiAddress *b);
+ 
+ /** Convert the specified address *a to a human readable character string */
+-gchar *avahi_address_snprint(char *ret_s, guint length, const AvahiAddress *a);
++const gchar *avahi_address_snprint(char *ret_s, guint length, const AvahiAddress *a);
+ 
+ /** Convert the specifeid human readable character string to an
+  * address structure. Set af to AVAHI_UNSPEC for automatic address
+Index: avahi-common/alternative-test.c
+===================================================================
+--- avahi-common/alternative-test.c	(revision 286)
++++ avahi-common/alternative-test.c	(working copy)
+@@ -27,7 +27,7 @@
+ 
+ #include "alternative.h"
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+     gchar *r = NULL;
+     gint i, k;
+ 
+Index: avahi-core/timeeventq-test.c
+===================================================================
+--- avahi-core/timeeventq-test.c	(revision 286)
++++ avahi-core/timeeventq-test.c	(working copy)
+@@ -38,7 +38,7 @@
+     avahi_time_event_queue_update(q, e, &tv);
+ }
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+     GMainLoop *loop = NULL;
+     GTimeVal tv;
+     
+Index: avahi-core/dns-test.c
+===================================================================
+--- avahi-core/dns-test.c	(revision 286)
++++ avahi-core/dns-test.c	(working copy)
+@@ -27,7 +27,7 @@
+ #include "util.h"
+ #include "log.h"
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+     gchar t[256];
+     const gchar *a, *b, *c, *d;
+     AvahiDnsPacket *p;
+Index: avahi-core/avahi-test.c
+===================================================================
+--- avahi-core/avahi-test.c	(revision 286)
++++ avahi-core/avahi-test.c	(working copy)
+@@ -41,7 +41,7 @@
+     return FALSE;
+ }
+ 
+-static void dump_line(const gchar *text, gpointer userdata) {
++static void dump_line(const gchar *text, G_GNUC_UNUSED gpointer userdata) {
+     printf("%s\n", text);
+ }
+ 
+@@ -51,7 +51,7 @@
+     return TRUE;
+ }
+ 
+-static void record_browser_callback(AvahiRecordBrowser *r, AvahiIfIndex interface, AvahiProtocol protocol, AvahiBrowserEvent event, AvahiRecord *record, gpointer userdata) {
++static void record_browser_callback(AvahiRecordBrowser *r, AvahiIfIndex interface, AvahiProtocol protocol, AvahiBrowserEvent event, AvahiRecord *record, G_GNUC_UNUSED gpointer userdata) {
+     gchar *t;
+     
+     g_assert(r);
+@@ -68,7 +68,7 @@
+ static void remove_entries(void);
+ static void create_entries(gboolean new_name);
+ 
+-static void entry_group_callback(AvahiServer *s, AvahiEntryGroup *g, AvahiEntryGroupState state, gpointer userdata) {
++static void entry_group_callback(G_GNUC_UNUSED AvahiServer *s, G_GNUC_UNUSED AvahiEntryGroup *g, AvahiEntryGroupState state, G_GNUC_UNUSED gpointer userdata) {
+     avahi_log_debug("entry group state: %i", state); 
+ 
+     if (state == AVAHI_ENTRY_GROUP_COLLISION) {
+@@ -80,7 +80,7 @@
+     }
+ }
+ 
+-static void server_callback(AvahiServer *s, AvahiServerState state, gpointer userdata) {
++static void server_callback(AvahiServer *s, AvahiServerState state, G_GNUC_UNUSED gpointer userdata) {
+ 
+      avahi_log_debug("server state: %i", state); 
+     
+@@ -152,7 +152,7 @@
+     group = NULL;
+ }
+ 
+-static void hnr_callback(AvahiHostNameResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *hostname, const AvahiAddress *a, gpointer userdata) {
++static void hnr_callback(G_GNUC_UNUSED AvahiHostNameResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiResolverEvent event, const gchar *hostname, const AvahiAddress *a, G_GNUC_UNUSED gpointer userdata) {
+     gchar t[64];
+ 
+     if (a)
+@@ -161,7 +161,7 @@
+     avahi_log_debug("HNR: (%i.%i) <%s> -> %s [%s]", iface, protocol, hostname, a ? t : "n/a", event == AVAHI_RESOLVER_FOUND ? "found" : "timeout");
+ }
+ 
+-static void ar_callback(AvahiAddressResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const AvahiAddress *a, const gchar *hostname, gpointer userdata) {
++static void ar_callback(G_GNUC_UNUSED AvahiAddressResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiResolverEvent event, const AvahiAddress *a, const gchar *hostname, G_GNUC_UNUSED gpointer userdata) {
+     gchar t[64];
+ 
+     avahi_address_snprint(t, sizeof(t), a);
+@@ -169,21 +169,21 @@
+     avahi_log_debug("AR: (%i.%i) %s -> <%s> [%s]", iface, protocol, t, hostname ? hostname : "n/a", event == AVAHI_RESOLVER_FOUND ? "found" : "timeout");
+ }
+ 
+-static void db_callback(AvahiDomainBrowser *b, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *domain, gpointer userdata) {
++static void db_callback(G_GNUC_UNUSED AvahiDomainBrowser *b, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *domain, G_GNUC_UNUSED gpointer userdata) {
+ 
+     avahi_log_debug("DB: (%i.%i) <%s> [%s]", iface, protocol, domain, event == AVAHI_BROWSER_NEW ? "new" : "remove");
+ }
+ 
+-static void stb_callback(AvahiServiceTypeBrowser *b, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *service_type, const gchar *domain, gpointer userdata) {
++static void stb_callback(G_GNUC_UNUSED AvahiServiceTypeBrowser *b, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *service_type, const gchar *domain, G_GNUC_UNUSED gpointer userdata) {
+ 
+     avahi_log_debug("STB: (%i.%i) %s in <%s> [%s]", iface, protocol, service_type, domain, event == AVAHI_BROWSER_NEW ? "new" : "remove");
+ }
+ 
+-static void sb_callback(AvahiServiceBrowser *b, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *name, const gchar *service_type, const gchar *domain, gpointer userdata) {
++static void sb_callback(G_GNUC_UNUSED AvahiServiceBrowser *b, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *name, const gchar *service_type, const gchar *domain, G_GNUC_UNUSED gpointer userdata) {
+    avahi_log_debug("SB: (%i.%i) <%s> as %s in <%s> [%s]", iface, protocol, name, service_type, domain, event == AVAHI_BROWSER_NEW ? "new" : "remove");
+ }
+ 
+-static void sr_callback(AvahiServiceResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar *name, const gchar*service_type, const gchar*domain_name, const gchar*hostname, const AvahiAddress *a, guint16 port, AvahiStringList *txt, gpointer userdata) {
++static void sr_callback(G_GNUC_UNUSED AvahiServiceResolver *r, AvahiIfIndex iface, AvahiProtocol protocol, AvahiResolverEvent event, const gchar *name, const gchar*service_type, const gchar*domain_name, const gchar*hostname, const AvahiAddress *a, guint16 port, AvahiStringList *txt, G_GNUC_UNUSED gpointer userdata) {
+ 
+     if (event == AVAHI_RESOLVER_TIMEOUT)
+         avahi_log_debug("SR: (%i.%i) <%s> as %s in <%s> [timeout]", iface, protocol, name, service_type, domain_name);
+@@ -198,13 +198,13 @@
+     }
+ }
+ 
+-static void dsb_callback(AvahiDNSServerBrowser *b, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar*hostname, const AvahiAddress *a, guint16 port, gpointer userdata) {
++static void dsb_callback(G_GNUC_UNUSED AvahiDNSServerBrowser *b, AvahiIfIndex iface, AvahiProtocol protocol, AvahiBrowserEvent event, const gchar*hostname, const AvahiAddress *a, guint16 port, G_GNUC_UNUSED gpointer userdata) {
+     gchar t[64];
+     avahi_address_snprint(t, sizeof(t), a);
+     avahi_log_debug("DSB: (%i.%i): %s/%s:%i [%s]", iface, protocol, hostname, t, port, event == AVAHI_BROWSER_NEW ? "new" : "remove");
+ }
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+     GMainLoop *loop = NULL;
+     AvahiRecordBrowser *r;
+     AvahiHostNameResolver *hnr;
+Index: avahi-core/prioq-test.c
+===================================================================
+--- avahi-core/prioq-test.c	(revision 286)
++++ avahi-core/prioq-test.c	(working copy)
+@@ -76,7 +76,7 @@
+     rec(n->right);
+ }
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+     AvahiPrioQueue *q, *q2;
+     gint i;
+ 
+Index: avahi-core/avahi-reflector.c
+===================================================================
+--- avahi-core/avahi-reflector.c	(revision 286)
++++ avahi-core/avahi-reflector.c	(working copy)
+@@ -30,7 +30,7 @@
+ 
+ #include <avahi-core/core.h>
+ 
+-int main(int argc, char*argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char*argv[]) {
+     AvahiServer *server;
+     AvahiServerConfig config;
+     GMainLoop *loop;
+Index: avahi-core/browse.c
+===================================================================
+--- avahi-core/browse.c	(revision 286)
++++ avahi-core/browse.c	(working copy)
+@@ -46,7 +46,7 @@
+     AVAHI_LLIST_FIELDS(AvahiRecordBrowser, by_key);
+ };
+ 
+-static void elapse(AvahiTimeEvent *e, void *userdata) {
++static void elapse(G_GNUC_UNUSED AvahiTimeEvent *e, void *userdata) {
+     AvahiRecordBrowser *s = userdata;
+     GTimeVal tv;
+ /*     gchar *t;  */
+Index: avahi-core/cache.c
+===================================================================
+--- avahi-core/cache.c	(revision 286)
++++ avahi-core/cache.c	(working copy)
+@@ -215,16 +215,17 @@
+ }
+ 
+ static void next_expiry(AvahiCache *c, AvahiCacheEntry *e, guint percent) {
++    AvahiUsec usec;
++    
+     g_assert(c);
+     g_assert(e);
+     g_assert(percent > 0 && percent <= 100);
+-    AvahiUsec usec;
+ /*     gchar *txt; */
+ 
+     usec = ((AvahiUsec) e->record->ttl) * 10000;
+ 
+     /* 2% jitter */
+-    usec = (AvahiUsec) g_random_double_range((gdouble) (usec*percent), (gdouble) (usec*(percent+2)));
++    usec = (AvahiUsec) g_random_int_range((gdouble) (usec*percent), (gdouble) (usec*(percent+2)));
+ /*     g_message("next expiry: %lli (%s)", usec / 1000000, txt = avahi_record_to_string(e->record)); */
+ /*     g_free(txt); */
+     
+Index: avahi-core/netlink.c
+===================================================================
+--- avahi-core/netlink.c	(revision 286)
++++ avahi-core/netlink.c	(working copy)
+@@ -99,7 +99,7 @@
+     return nl->poll_fd.revents & (G_IO_IN|G_IO_HUP|G_IO_ERR);
+ }
+ 
+-static gboolean dispatch_func(GSource *source, GSourceFunc callback, gpointer user_data) {
++static gboolean dispatch_func(GSource *source, G_GNUC_UNUSED GSourceFunc callback, G_GNUC_UNUSED gpointer user_data) {
+     AvahiNetlink* nl;
+     g_assert(source);
+ 
+Index: avahi-core/server.c
+===================================================================
+--- avahi-core/server.c	(revision 286)
++++ avahi-core/server.c	(working copy)
+@@ -274,7 +274,7 @@
+     g_free(t);
+ }
+ 
+-static gboolean handle_conflict(AvahiServer *s, AvahiInterface *i, AvahiRecord *record, gboolean unique, const AvahiAddress *a) {
++static gboolean handle_conflict(AvahiServer *s, AvahiInterface *i, AvahiRecord *record, gboolean unique, G_GNUC_UNUSED const AvahiAddress *a) {
+     gboolean valid = TRUE, ours = FALSE, conflict = FALSE, withdraw_immediately = FALSE;
+     AvahiEntry *e, *n, *conflicting_entry = NULL;
+     
+@@ -457,9 +457,11 @@
+                         reply = avahi_dns_packet_new_reply(p, size, FALSE, TRUE);
+ 
+                         if (!avahi_dns_packet_append_record(reply, r, flush_cache, 0)) {
++                            gchar *t = NULL;
++
+                             avahi_dns_packet_free(reply);
+                             
+-                            gchar *t = avahi_record_to_string(r);
++                            t = avahi_record_to_string(r);
+                             avahi_log_warn("Record [%s] too large, doesn't fit in any packet!", t);
+                             g_free(t);
+                             break;
+@@ -951,7 +953,7 @@
+     }
+ }
+ 
+-static void dispatch_legacy_unicast_packet(AvahiServer *s, AvahiDnsPacket *p, const struct sockaddr *sa, AvahiIfIndex iface, gint ttl) {
++static void dispatch_legacy_unicast_packet(AvahiServer *s, AvahiDnsPacket *p, const struct sockaddr *sa, AvahiIfIndex iface, G_GNUC_UNUSED gint ttl) {
+     AvahiInterface *i, *j;
+     AvahiAddress a;
+     guint16 port;
+@@ -1073,7 +1075,7 @@
+     return !!(revents & (G_IO_IN | G_IO_HUP | G_IO_ERR));
+ }
+ 
+-static gboolean dispatch_func(GSource *source, GSourceFunc callback, gpointer user_data) {
++static gboolean dispatch_func(GSource *source, G_GNUC_UNUSED GSourceFunc callback, G_GNUC_UNUSED gpointer user_data) {
+     AvahiServer* s;
+     g_assert(source);
+ 
+@@ -1126,7 +1128,7 @@
+     s->n_host_rr_pending ++;
+ }
+ 
+-void avahi_host_rr_entry_group_callback(AvahiServer *s, AvahiEntryGroup *g, AvahiEntryGroupState state, void *userdata) {
++void avahi_host_rr_entry_group_callback(AvahiServer *s, AvahiEntryGroup *g, AvahiEntryGroupState state, G_GNUC_UNUSED void *userdata) {
+     g_assert(s);
+     g_assert(g);
+ 
+@@ -2036,7 +2038,8 @@
+     if (g->state == state)
+         return;
+ 
+-    g_assert(state >= AVAHI_ENTRY_GROUP_UNCOMMITED && state <= AVAHI_ENTRY_GROUP_COLLISION);
++    /* g_assert(state >= AVAHI_ENTRY_GROUP_UNCOMMITED && state <= AVAHI_ENTRY_GROUP_COLLISION); */
++    g_assert(state <= AVAHI_ENTRY_GROUP_COLLISION);
+ 
+     g->state = state;
+     
+@@ -2103,7 +2106,7 @@
+     }
+ }
+ 
+-static void entry_group_register_time_event_callback(AvahiTimeEvent *e, gpointer userdata) {
++static void entry_group_register_time_event_callback(G_GNUC_UNUSED AvahiTimeEvent *e, gpointer userdata) {
+     AvahiEntryGroup *g = userdata;
+     g_assert(g);
+ 
+Index: avahi-core/conformance-test.c
+===================================================================
+--- avahi-core/conformance-test.c	(revision 286)
++++ avahi-core/conformance-test.c	(working copy)
+@@ -40,11 +40,11 @@
+ static int try = 0;
+ static AvahiServer *avahi = NULL;
+ 
+-static void dump_line(const gchar *text, gpointer userdata) {
++static void dump_line(const gchar *text, G_GNUC_UNUSED gpointer userdata) {
+     printf("%s\n", text);
+ }
+ 
+-static gboolean dump_timeout(gpointer data) {
++static gboolean dump_timeout(G_GNUC_UNUSED gpointer data) {
+     avahi_server_dump(avahi, dump_line, NULL);
+     return TRUE;
+ }
+@@ -71,7 +71,7 @@
+     try++;
+ }
+ 
+-static gboolean rename_timeout(gpointer data) {
++static gboolean rename_timeout(G_GNUC_UNUSED gpointer data) {
+     
+     if (access("flag", F_OK) == 0) { 
+         create_service("New - Bonjour Service Name");
+@@ -81,7 +81,7 @@
+     return TRUE;
+ }
+ 
+-static void entry_group_callback(AvahiServer *s, AvahiEntryGroup *g, AvahiEntryGroupState state, gpointer userdata) {
++static void entry_group_callback(G_GNUC_UNUSED AvahiServer *s, G_GNUC_UNUSED AvahiEntryGroup *g, AvahiEntryGroupState state, G_GNUC_UNUSED gpointer userdata) {
+     if (state == AVAHI_ENTRY_GROUP_COLLISION)
+         create_service(NULL);
+     else if (state == AVAHI_ENTRY_GROUP_ESTABLISHED) {
+@@ -90,7 +90,7 @@
+     }
+ }
+ 
+-static void server_callback(AvahiServer *s, AvahiServerState state, gpointer userdata) {
++static void server_callback(G_GNUC_UNUSED AvahiServer *s, AvahiServerState state, G_GNUC_UNUSED gpointer userdata) {
+     avahi_log_debug("server state: %i", state);
+ 
+     if (state == AVAHI_SERVER_RUNNING) {
+@@ -99,7 +99,7 @@
+     }
+ }
+ 
+-int main(int argc, char *argv[]) {
++int main(G_GNUC_UNUSED int argc, G_GNUC_UNUSED char *argv[]) {
+     GMainLoop *loop = NULL;
+     gint error;
+ 
+Index: avahi-core/timeeventq.c
+===================================================================
+--- avahi-core/timeeventq.c	(revision 286)
++++ avahi-core/timeeventq.c	(working copy)
+@@ -91,7 +91,7 @@
+         avahi_timeval_compare(&now, &e->last_run) != 0;  /* Not yet run */
+ }
+ 
+-static gboolean dispatch_func(GSource *source, GSourceFunc callback, gpointer user_data) {
++static gboolean dispatch_func(GSource *source, G_GNUC_UNUSED GSourceFunc callback, G_GNUC_UNUSED gpointer user_data) {
+     AvahiTimeEventQueue *q = (AvahiTimeEventQueue*) source;
+     GTimeVal now;
+ 
+Index: avahi-core/response-sched.c
+===================================================================
+--- avahi-core/response-sched.c	(revision 286)
++++ avahi-core/response-sched.c	(working copy)
+@@ -170,7 +170,7 @@
+         job_free(s, s->suppressed);
+ }
+ 
+-static void enumerate_aux_records_callback(AvahiServer *s, AvahiRecord *r, gboolean flush_cache, gpointer userdata) {
++static void enumerate_aux_records_callback(G_GNUC_UNUSED AvahiServer *s, AvahiRecord *r, gboolean flush_cache, gpointer userdata) {
+     AvahiResponseJob *rj = userdata;
+     
+     g_assert(r);
+@@ -245,7 +245,7 @@
+     avahi_dns_packet_free(p);
+ }
+ 
+-static void elapse_callback(AvahiTimeEvent *e, gpointer data) {
++static void elapse_callback(G_GNUC_UNUSED AvahiTimeEvent *e, gpointer data) {
+     AvahiResponseJob *rj = data;
+ 
+     g_assert(rj);
+Index: avahi-core/browse-dns-server.c
+===================================================================
+--- avahi-core/browse-dns-server.c	(revision 286)
++++ avahi-core/browse-dns-server.c	(working copy)
+@@ -90,7 +90,7 @@
+     g_free(i);
+ }
+ 
+-static void host_name_resolver_callback(AvahiHostNameResolver *r, AvahiIfIndex interface, AvahiProtocol protocol, AvahiResolverEvent event, const gchar *host_name, const AvahiAddress *a, gpointer userdata) {
++static void host_name_resolver_callback(AvahiHostNameResolver *r, G_GNUC_UNUSED AvahiIfIndex interface, G_GNUC_UNUSED AvahiProtocol protocol, AvahiResolverEvent event, const gchar *host_name, const AvahiAddress *a, gpointer userdata) {
+     AvahiDNSServerInfo *i = userdata;
+     
+     g_assert(r);
+Index: avahi-core/query-sched.c
+===================================================================
+--- avahi-core/query-sched.c	(revision 286)
++++ avahi-core/query-sched.c	(working copy)
+@@ -239,7 +239,7 @@
+     avahi_dns_packet_free(p);
+ }
+ 
+-static void elapse_callback(AvahiTimeEvent *e, gpointer data) {
++static void elapse_callback(G_GNUC_UNUSED AvahiTimeEvent *e, gpointer data) {
+     AvahiQueryJob *qj = data;
+     AvahiQueryScheduler *s;
+     AvahiDnsPacket *p;
+Index: avahi-core/probe-sched.c
+===================================================================
+--- avahi-core/probe-sched.c	(revision 286)
++++ avahi-core/probe-sched.c	(working copy)
+@@ -200,7 +200,7 @@
+     return TRUE;
+ }
+ 
+-static void elapse_callback(AvahiTimeEvent *e, gpointer data) {
++static void elapse_callback(G_GNUC_UNUSED AvahiTimeEvent *e, gpointer data) {
+     AvahiProbeJob *pj = data, *next;
+     AvahiProbeScheduler *s;
+     AvahiDnsPacket *p;

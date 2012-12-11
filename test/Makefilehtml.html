@@ -1,0 +1,5 @@
+senddbussignal-glib: senddbussignal-glib.c
+	gcc -o senddbussignal-glib `pkg-config --libs --cflags dbus-glib-1` -g -DDBUS_API_SUBJECT_TO_CHANGE senddbussignal-glib.c
+
+senddbussignal: senddbussignal.c
+	gcc -o senddbussignal `pkg-config --libs --cflags dbus-1` -g -DDBUS_API_SUBJECT_TO_CHANGE senddbussignal.c

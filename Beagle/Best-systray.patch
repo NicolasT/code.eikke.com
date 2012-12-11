@@ -1,0 +1,16 @@
+Index: Best/Best.cs
+===================================================================
+RCS file: /cvs/gnome/beagle/Best/Best.cs,v
+retrieving revision 1.10
+diff -u -b -B -r1.10 Best.cs
+--- Best/Best.cs	25 Jan 2005 16:13:08 -0000	1.10
++++ Best/Best.cs	3 Feb 2005 13:05:49 -0000
+@@ -88,6 +88,8 @@
+ 				win.FocusEntry ();
+ 			}
+ 			
++                        Console.WriteLine ("If you're wondering whether Best is working: check your SysTray");
++			
+ 			best.Run ();
+ 		}
+ 	}

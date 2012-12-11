@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Test feed</title>
+    <link>http://blog.eikke.com/ikke</link>
+    <description>This is a test merged feed</description>
+    <item>
+      <title>All Blogs: Delay between jabber.belnet.be and amessage, back in full force</title>
+      <link>http://blog.eikke.com/index.php/peter/2005/05/09/delay_between_jabber_belnet_be_and_amess</link>
+      <description>Seems there's some delay when sending messages from a jabber.belnet.be JID to someone at one of the amessage-servers (or in the other direction but not in both).  Very annoying.  I emailed a belnet-admin, who replied with the message they know about it and are looking for a solution together with the amessage and jabber.org admins.  Let's hope they fix it soon.  After a previous problem with the server2server connections of amessage, there seems to be some work to do on it.
+
+My gentoo is kind of complete now B-)  Today, I connected the harddisk of my previous computer to my laptop with a IDE-to-USB2.0 connector cable I borrowed from our faculty-admin Jeroen.  Very fast :-)  Now I have everything to work back in full force.  Maybe just some little tweaking on gnome or gentoo will be necessary.  So I should search how I can make my system detect if there's a cable connected at boot time of if there's a registered WAP in the environment to connect to.  This may not take a very long time, so I don't think in terms of dhcp-timeouts.  If you use windows and plug out your networkcable, there pops up a message your cable is detached, all without dhcp- or ping delays.  If you know a good solution, please be my guest.
+
+My girlfriends final year thesis is finaly complete.  She wrote the last things today.  Tomorrow she has an appointment with her mentor for some final touches.</description>
+      <pubDate>Mon,  9 May 2005 20:57:30 +0000</pubDate>
+    </item>
+    <item>
+      <title>All Blogs: MSN Webcam functionality part II and minor coding</title>
+      <link>http://blog.eikke.com/index.php/ikke/2005/05/07/msn_webcam_functionality_part_ii_and_min</link>
+      <description>http://www.opensourcenieuws.nl/index.php/content/view/2258/ Why didn't I hear about this any earlier, and why isn't it integrated into Gaim?
+
+Oh, for Soylent, I started working on blog feed reading. Currently I got some code that can read an XML feed from any GnomeVFS source, and create a libxml2 xmlDoc out of it. Although maybe I should use SAX to merge different feeds...
+Using an XSLT sheet to merge feeds would be really cool and clean, but I think it's the hardest way too ;-)
+I tried to document the code well again, it's available here. Can be a nice introduction to GnomeVFS coding :-) (this was my first code using it too ;-))
+
+TODO: add a check to see whether what we pull in is an RSS feed, before loading the whole document, to save bandwidth and memory.</description>
+      <pubDate>Sat,  7 May 2005 17:08:46 +0000</pubDate>
+    </item>
+    <item>
+      <title>All Blogs: First EDS code</title>
+      <link>http://blog.eikke.com/index.php/ikke/2005/05/06/first_eds_code</link>
+      <description>http://code.eikke.com/index.php?dir=ProjectSoylent/ I started looking into evolution-data-server today, to look what we could use in Project Soylent (actually, I shouldn't blog on it because we don't want any noise on it yet :-)). The result is some code that can dump all your address books, or only dump some of the contacts using a filter string.
+
+Because libebook is very poor documented (unfortunately, even the API docs aren't complete) I tried to document the code as good as possible. Please review it, let me know when some things are not well documented, or I just make dumb mistakes in the code :-D
+The last version I made is here.
+
+Compile it using
+gcc -o evo-addressbooks-test2 `pkg-config --cflags --libs libbonobo-2.0 libebook-1.2` evo-addressbooks-test2.c
+Dump your address books using
+./evo-addressbook-test2
+or use a filter string as first argument. Beware: you should Bash-escape the argument!!!
+A sample of this:
+./evo-addressbooks-test2 "(contains \"full_name\" \"John Doe\")"
+will list some properties of the entry which has "John Doe" as it's full name.
+
+I hope I'll be able to hack on this some more, and also hope we'll get a good view of what Soylent should become soon :-)
+It'll be a great oportunity to learn some more aspects of Gnome coding, like GTK/Glade, Bonobo (|-|) and others.</description>
+      <pubDate>Fri,  6 May 2005 21:11:56 +0000</pubDate>
+    </item>
+    <item>
+      <title>All Blogs: New blog engine and Soylent</title>
+      <link>http://blog.eikke.com/index.php/ikke/2005/05/06/new_blog_engine_and_soylent</link>
+      <description>As I mentioned before, I'd like to start using another blogging engine as soon as possible. Plog looked nice, but after giving it a test drive I got into some little annoying problems.
+Now the b2evolution guys seem to prepare a maintainance version, so development hasn't completely stalled.
+
+Currently, the blogs (mine and the others I host) run fine I think, and migrating would be quite a lot of work (existing users and posts, not to mention changes of URI's towards aggregators), so I guess I'll wait some longer, unless someone knows a very good engine I could start using, actively maintained.
+The main "issue" I got is the fact I host multiple blogs. Most engines don't support this...
+
+Project Soylent is getting started, jay :-) Just read something on using Evolution's libebook API and FOAF, this will be some fun project to work on B-)
+
+Oh, and please everyone vote for davyvandenbremt.be on may1reboot.com.</description>
+      <pubDate>Fri,  6 May 2005 14:06:11 +0000</pubDate>
+    </item>
+    <item>
+      <title>All Blogs: Process sendmail spool by postfix</title>
+      <link>http://blog.eikke.com/index.php/peter/2005/05/06/process_sendmail_spool_by_postfix</link>
+      <description>This week, we had big troubles on our mailserver at VTK.  The big ugly devil was sendmail.  He stopped delivering mails to local users.  After trying to fix it, wich didn't make it work, Lennert and Ikke installed postfix on the machine.  Everything is working  now, but there's one big issue: sendmail still had 240 messages in /var/spool/mqueue, wich he had to deliver but never did.  Now, I want postfix to deliver these.  I already did some research, but all I found was "put the files in /var/spool/mqueue.in" wich is a Q for postfix on some configurations.  We don't have such a configuration.  We have /var/spool/postfix/incoming (and so on) with lots of folders (1,2,3...,A,B,...) in it with the same kind of subfolders in.  I don't know where to put those files in now.
+
+If someone nows how to make postfix handle these messages, or how to make sendmail just send these messages to some smtp-server (but not handle the incoming ones), please let me know.  Thanks.</description>
+      <pubDate>Fri,  6 May 2005 10:02:57 +0000</pubDate>
+    </item>
+    <item>
+      <title>Publino's Blog: Mijn Kind?</title>
+      <link>http://blog.eikke.com/index.php/publino/2004/12/05/mijn_kind</link>
+      <description>Is het een misvormde droom
+van bron tot monding
+deinend op de dodenstroom
+
+die door de late lucht
+als trage kille mist
+als onderkoelde zucht
+met wrede rede twist?
+
+Waarom moeten
+fonkelende ogen
+laaiend als vuur
+verblind vervlogen
+in aarde wroeten?
+
+Wie weet waar je heen gaat,
+gedragen door een wind, 
+die slechts je naam verraadt,
+immer eenzaam kind?
+
+Het is de schaduw van de nacht
+die leeg want zonder dag
+jou en mij heeft omgebracht. 
+</description>
+      <pubDate>Sun,  5 Dec 2004 10:52:53 +0000</pubDate>
+    </item>
+    <item>
+      <title>Publino's Blog: Schrijfschreeuw</title>
+      <link>http://blog.eikke.com/index.php/publino/2004/12/04/schrijfschreeuw</link>
+      <description>Je bent columnist, of je probeert het te zijn, en je treuzelt door de Gentse binnenstad. Waarom? Omdat je pen anders inktloos blijft. Lachen met rijken die om aandacht schreeuwen lukt het best met kerst. Lang leve de kerstdagen! Hoe slentert de stukjesschrijver door idyllisch verlichte kinderkopjessteegjes? Met zijn handen diep in zijn zakken en de kraag van zijn jas omhoog. Bij elk Glühweinkot houdt hij even halt, want na een paar uur schoenen verslijten verscheurt de winter de door een overdosis wasmachine verdunde pluimpjesjas.
+
+Met een beetje geluk ziet de stakker er redelijk sjofel uit want schrijven brengt zoveel op dat enkel die wanhopige types naar de pen grijpen die net niet genoeg lef hebben voor de spuit. Zijn volledige maandloon gaat op in de huur van een kamer met wasbak die eveneens als wc en gootsteen dienst doet, en aan de alcoholhoudende inspiratiefonteinen, oftewel pintjes. Ferm ongewassen en slaperig gapend infiltreert dit verdachte individu zich in de meute koopjesjachthonden die als volleerde aquariumkuisvissen vitrines likken. Een enkeling met een hoog Jezusgehalte doorziet een fractie van een seconde te lang dat Kerstmis meer is dan voor de gelegenheid met nepsneeuw bedekte naaldbomen, bedolven onder keurig verpakte cadeau’s. Hij en zijn oudewijvenkoortrotserende gezinnetje staan elke zondag in de kerk. Niet voor de verwarming, maar om de Blijde Boodschap actueel te houden. Daar is niets mis mee. Hij wil die boodschap echter ook in praktijk omzetten en een arme, door Gent zwervende ijspegel een kerstfeestje in gezellige familiekring cadeau doen. Erg lief, maar in het geval van de columnist is dit voor geen van beiden een goede zaak en dus AB-SO-LUUT af te raden.
+
+Prent het voor eens en altijd in die gereformeerde koppen van jullie dat een dergelijk pennenverslaafd wildeman zonder enige twijfel jullie hele avond aan flarden zal lullen. Een inktverslindend schizofreen spuwt immers massa’s kritiek over de degoutant overvloedig gevulde feesttafel, wat uw met zorg bereide, exquise gerechten niet ten goede komt. Redelijk begrijpelijk aangezien hij zit te dineren in dat soort huis dat hij bewust geruild heeft voor zijn afgebladderde kamer. Pas als hij dagelijks met koppijn rond het middaguur opstaat, waarna hij zijn blaas uit haar lijden verlost in de wasbak, kijkt hij anders tegen de voor sommigen perfect georganiseerde wereld aan. Pas als hij blikken van verstandhouding uitwisselt met de voor de Fnac neergezeten amateur-gitarist – meer amateur dan gitarist – merkt hij overal de bagatellen kakelende wibrajurken op die hun kinderen aan de schoolpoort opwachten. Pas als hij uit zijn geldroes ontwaakt, ontsluit de satirepoort zich en vecht hij met al zijn naïeve jeugdideologie tegen de euroschieters.
+
+De rijkenluizenkritikaster zou zich bij het zien van zoveel weelde wel eens blind kunnen staren op iets banaals als het van zijn ongewassen kop afvriezen van de oren. Hij is ook maar een mens die instinctief probeert te overleven en zou in de verleiding komen om met hangende pootjes naar moeders wasmachine en vaders overvolle portefeuille terug te keren want soms gaan winterontberingen knap vervelen. Zijn kritische blijk vermoord, waardoor u niet meer wakker geschud zou worden. Als de indommelende menigte begint te slaapwandelen, wordt het gesnurk zo oorverdovend dat iedereen denkt Helmut Lotti te evenaren. Ik kan mij geen ergere cultuurvervlakking indenken. 
+
+Indien u nu mijmert over de columnloze dagen waarin uw neus niet op de met fictie vermengde feiten werd gedrukt en u in de verleiding komt om mij op kerstavond een zoetwaterkreeftje onder de neus te duwen – overwegend dat een mislukte kerst minder erg is dan een slapeloos leven – weet dan dat ik Glühwein prefereer. Kreeft is veel te veel prutswerk. Daarna ga ik duetjes janken met de kerel aan de Fnac. Ja, zijn hond zingt ook mee: fuiven tot ’s morgens vroeg.
+
+Doe jezelf toch mijn boek cadeau. De volgende kerst wil ik in een chique Lodens penthouserestaurant vieren.
+</description>
+      <pubDate>Sat,  4 Dec 2004 14:14:45 +0000</pubDate>
+    </item>
+    <item>
+      <title>Publino's Blog: Mijn pagina op Het Schrijvertje</title>
+      <link>http://blog.eikke.com/index.php/publino/2004/12/04/mijn_pagina_op_het_schrijvertje</link>
+      <description>http://publino.hetschrijvertje.be Klik op de titel om naar mijn website te gaan.</description>
+      <pubDate>Sat,  4 Dec 2004 13:57:30 +0000</pubDate>
+    </item>
+    <item>
+      <title>Publino's Blog: MERCIE!!!</title>
+      <link>http://blog.eikke.com/index.php/publino/2004/12/04/mercie</link>
+      <description>Jaja, het is zover. Ik ben hier dus op dit eigenste ogenblik bezig met het creëren van mijn eigen Blog. En dat allemaal dankzij the one and only Ikke :-p. Dus, als iedereen in koor "Mercie, Ikke, Mercieeee!" wil zingen, ben ik heel tevreden.</description>
+      <pubDate>Sat,  4 Dec 2004 13:21:09 +0000</pubDate>
+    </item>
+  </channel>
+</rss>

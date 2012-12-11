@@ -1,0 +1,100 @@
+? emailstuff1.patch
+? mail-and-gaim-fixes-30.01.05.patch
+? Util/IrcLog.cs
+? beagled/IrssiLogQueryable
+Index: Tiles/Tile.cs
+===================================================================
+RCS file: /cvs/gnome/beagle/Tiles/Tile.cs,v
+retrieving revision 1.22
+diff -u -b -B -r1.22 Tile.cs
+--- Tiles/Tile.cs	29 Jan 2005 16:41:30 -0000	1.22
++++ Tiles/Tile.cs	30 Jan 2005 20:52:50 -0000
+@@ -215,12 +215,17 @@
+ 			p.StartInfo.FileName        = "evolution";
+ 			p.StartInfo.Arguments       = "mailto:";
+ 
++                        //If the email/name combo contains spaces, this will break without " "
++                        p.StartInfo.Arguments += "\"";
++
+ 			if (email != null && email != "")
+ 				p.StartInfo.Arguments += email;
+ 
+ 			if (attach != null && attach != "")
+ 				p.StartInfo.Arguments += "?attach=" + attach;
+ 			
++                        p.StartInfo.Arguments += "\"";
++                        
+ 			try {
+ 				p.Start () ;
+ 			} catch (Exception e) {
+@@ -234,11 +239,14 @@
+ 			if (screenname == null)
+ 				return;
+ 
+-			Console.WriteLine ("SendImAim {0}", screenname);
++        		Console.WriteLine ("SendIm {0}", screenname);
+ 			Process p = new Process ();
+ 			p.StartInfo.UseShellExecute = false;
+ 			p.StartInfo.FileName        = "gaim-remote";
++                        if (protocol != null)
+ 			p.StartInfo.Arguments       = "uri " + protocol + ":goim?screenname=" + screenname;
++                        else
++                                p.StartInfo.Arguments       = "-c " + screenname;
+ 
+ 			try {
+ 				p.Start () ;
+@@ -247,6 +255,11 @@
+ 			}
+ 		}
+ 
++                protected void SendIm (string screenname)
++                {
++                        SendIm (null, screenname);
++                }
++
+ 		protected void SendImAim (string screenname)
+ 		{
+ 			SendIm ("aim", screenname);
+Index: Tiles/TileImLog.cs
+===================================================================
+RCS file: /cvs/gnome/beagle/Tiles/TileImLog.cs,v
+retrieving revision 1.26
+diff -u -b -B -r1.26 TileImLog.cs
+--- Tiles/TileImLog.cs	25 Jan 2005 16:13:40 -0000	1.26
++++ Tiles/TileImLog.cs	30 Jan 2005 20:52:50 -0000
+@@ -55,6 +55,12 @@
+ 			if (buddy != null) {
+ 				Console.WriteLine ("Found buddy info for {0}, icon at {1}", buddy.Alias, buddy.BuddyIconLocation);
+ 				email = GetEmailForName (buddy.Alias);
++
++                                if (email == null || email == "")
++                                {
++                                        //This *could* be an email address, which is a good thing (eg MSNP, some Jabber people,...)
++                                        email=buddy.BuddyAccountName;
++                                }
+ 			}
+ 		}
+ 
+@@ -100,7 +106,7 @@
+ 		private string GetEmailForName (string name)
+ 		{
+ #if ENABLE_EVO_SHARP
+-			if (name == null)
++			if (name == null || name == "")
+ 				return null;
+ 
+ 			Evolution.Book addressbook = null;
+@@ -216,10 +222,12 @@
+ 			// for the IM protocol that was used.  This is
+ 			// an ugly hack to check whether the
+ 			// conversation took place over aim.
+-			if (Hit ["fixme:file"].IndexOf ("logs/aim") == -1)
++/*			if (Hit ["fixme:file"].IndexOf ("logs/aim") == -1)
+ 				return;
+ 			
+ 			SendImAim (Hit ["fixme:speakingto"]);
++*/
++                        SendIm (Hit ["fixme:speakingto"]);
+ 		}
+ 	}
+ }

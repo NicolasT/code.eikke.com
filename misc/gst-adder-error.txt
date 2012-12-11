@@ -1,0 +1,18 @@
+gst-xmllaunch-0.8 adder.xml
+RUNNING pipeline ...
+ERROR: from element /pipeline0/sinesrc0: Internal GStreamer error: negotiation
+problem.  File a bug.
+ERROR: from element /pipeline0/adder0: Internal GStreamer error: pad problem.
+File a bug.
+Additional debug info:
+gstpad.c(3392): gst_pad_pull: /pipeline0/adder0:
+NULL buffer during pull on adder0:sink0
+Execution ended after 1 iterations (sum 16926000 ns, average
+        16926000 ns, min 16926000 ns, max 16926000
+        ns).
+
+** ERROR **: file gstoptimalscheduler.c: line 871
+        (destroy_group): assertion failed: (group->group_links ==
+        NULL)
+aborting...
+Aborted

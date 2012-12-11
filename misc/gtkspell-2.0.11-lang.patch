@@ -1,0 +1,14 @@
+diff -ur -x docs gtkspell-2.0.11_orig/gtkspell/gtkspell.c gtkspell-2.0.11/gtkspell/gtkspell.c
+--- gtkspell-2.0.11_orig/gtkspell/gtkspell.c    2005-05-27 23:09:10.000000000 +0200
++++ gtkspell-2.0.11/gtkspell/gtkspell.c 2005-12-23 19:50:02.869815096 +0100
+@@ -521,6 +521,10 @@
+        AspellCanHaveError *err;
+        AspellSpeller *speller;
+
++    if (lang == NULL) {
++        lang = g_getenv("GTKSPELL_LANG");
++    }
++
+        if (lang == NULL) {
+                lang = g_getenv("LANG");
+                if (lang) {

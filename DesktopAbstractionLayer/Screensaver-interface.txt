@@ -1,0 +1,7 @@
+This is a first simple version of the screensaver interface
+
+DBUS Path: /org/freedesktop/DAL/Screensaver
+DBUS Object: org.freedesktop.DAL.Screensaver.Event
+
+Signals:	ScreensaverStarted
+		ScreensaverStopped

@@ -1,0 +1,287 @@
+? hal-storage.pc
+? intltool-extract
+? intltool-extract.in
+? intltool-merge
+? intltool-merge.in
+? intltool-update
+? intltool-update.in
+? kobject-uevent-for-hal-2.diff
+? kobject-uevent-for-hal.diff
+? doc/api/Doxyfile
+? doc/api/html
+? doc/spec/hal-spec.xml
+? po/Makefile.in.in
+? po/POTFILES
+? po/da.gmo
+? po/de.gmo
+? po/fr.gmo
+? po/hu.gmo
+? po/nl.gmo
+? po/pt.gmo
+? po/ru.gmo
+? tools/fstab-sync
+? tools/fstab-sync.8
+? tools/device-manager/hal-device-manager
+? tools/linux/hal-hotplug-map
+Index: configure.in
+===================================================================
+RCS file: /cvs/hal/hal/configure.in,v
+retrieving revision 1.60
+diff -u -b -B -u -r1.60 configure.in
+--- configure.in	7 Jan 2005 19:21:14 -0000	1.60
++++ configure.in	10 Jan 2005 20:29:22 -0000
+@@ -98,6 +98,14 @@
+ AC_SUBST(HOTPLUG_MAP_ENABLED)
+ AM_CONDITIONAL(HOTPLUG_MAP_ENABLED, test x$enable_hotplug_map = xyes)
+ 
++dnl Need AC_TRY_COMPILE here to check whether the NETLINK id was defined
++dnl AC_ARG_ENABLE(kobject_uevent,      [  --with-kobject-uevent   Kernel event support],enable_kobject_uevent=yes,enable_kobject_uevent=no)
++AC_ARG_ENABLE(kobject_uevent,      [  --with-kobject-uevent   Kernel event support])
++if test "x$enable_kobject_uevent" = "xyes" ; then
++    AC_DEFINE(KOBJECT_UEVENT_ENABLED,1,[Whether kobject-uevent support is requested])
++fi
++AC_SUBST(KOBJECT_UEVENT_ENABLED)
++AM_CONDITIONAL(KOBJECT_UEVENT_ENABLED, test x$enable_kobject_uevent = xyes)
+ 
+ #### gcc warning flags
+ 
+@@ -478,7 +486,9 @@
+         Extended PCMCIA support:  ${enable_pcmcia_support}
+         PCMCIA stab file:         ${PCMCIA_STAB_FILE}
+ 
+-        install hal-hotplug-map:  ${enable_hotplug_map}"
++        install hal-hotplug-map:  ${enable_hotplug_map}
++        
++        enable kobject-uevents:   ${enable_kobject_uevent}"
+ 
+ echo "
+         Maintainer mode:          ${USE_MAINTAINER_MODE}
+Index: hald/hald_dbus.c
+===================================================================
+RCS file: /cvs/hal/hal/hald/hald_dbus.c,v
+retrieving revision 1.17
+diff -u -b -B -u -r1.17 hald_dbus.c
+--- hald/hald_dbus.c	14 Dec 2004 02:57:48 -0000	1.17
++++ hald/hald_dbus.c	10 Jan 2005 20:29:24 -0000
+@@ -43,6 +43,7 @@
+ #include "logger.h"
+ #include "osspec.h"
+ 
++/* Argh, I know this not allowed propably, but I have no idea how to fix it */
+ static DBusConnection *dbus_connection;
+ 
+ /**
+@@ -1921,6 +1922,28 @@
+ 	return DBUS_HANDLER_RESULT_HANDLED;
+ }
+ 
++#ifdef KOBJECT_UEVENT_ENABLED
++/** Send a raw DBUS message
++ *
++ *  @param  message             Message
++ *  @return                     dbus_connection_send result
++ */
++dbus_bool_t
++hald_dbus_message_send (DBusMessage *message)
++{
++        return dbus_connection_send(dbus_connection, message, NULL);
++}
++
++/** Flush DBUS connection
++ *
++ */
++void
++hald_dbus_connection_flush()
++{
++        dbus_connection_flush (dbus_connection);
++}
++#endif
++
+ gboolean
+ hald_dbus_init (void)
+ {
+Index: hald/hald_dbus.h
+===================================================================
+RCS file: /cvs/hal/hal/hald/hald_dbus.h,v
+retrieving revision 1.4
+diff -u -b -B -u -r1.4 hald_dbus.h
+--- hald/hald_dbus.h	17 Sep 2004 17:05:48 -0000	1.4
++++ hald/hald_dbus.h	10 Jan 2005 20:29:25 -0000
+@@ -87,6 +87,11 @@
+ void device_property_atomic_update_begin (void);
+ void device_property_atomic_update_end   (void);
+ 
++#ifdef KOBJECT_UEVENT_ENABLED
++dbus_bool_t hald_dbus_message_send (DBusMessage *message);
++void hald_dbus_connection_flush ();
++#endif
++
+ gboolean hald_dbus_init (void);
+ 
+ #endif /* HAL_DBUS_H */
+Index: hald/linux/osspec.c
+===================================================================
+RCS file: /cvs/hal/hal/hald/linux/osspec.c,v
+retrieving revision 1.54
+diff -u -b -B -u -r1.54 osspec.c
+--- hald/linux/osspec.c	16 Dec 2004 16:13:08 -0000	1.54
++++ hald/linux/osspec.c	10 Jan 2005 20:29:28 -0000
+@@ -49,6 +49,26 @@
+ #include <dbus/dbus.h>
+ #include <dbus/dbus-glib.h>
+ 
++#ifdef KOBJECT_UEVENT_ENABLED
++    #include <linux/netlink.h>
++    #include "../hald_dbus.h"
++    /* environment buffer, the kernel's size in lib/kobject_uevent.c should fit in */
++    #define HOTPLUG_BUFFER_SIZE             1024
++    #define HOTPLUG_NUM_ENVP                32
++    #define OBJECT_SIZE                     512
++
++    /* This is pretty ugly... Needs removing the static modifier in hald_dbus.c */
++    extern DBusConnection *dbus_connection;
++
++    #ifndef NETLINK_KOBJECT_UEVENT
++/*        #error Your kernel headers are too old, and do not define NETLINK_KOBJECT_UEVENT. You need Linux 2.6.10 or higher for KOBJECT_UEVENT support. */
++/*        Warn for now */
++        #warning Your kernel headers are too old, and do not define NETLINK_KOBJECT_UEVENT. You need Linux 2.6.10 or higher for KOBJECT_UEVENT support.
++/*        I know, this is an incredibly ugly hack... Need updated kernel headers. */
++        #define NETLINK_KOBJECT_UEVENT  15      /* Kernel messages to userspace (from linux/netlink.h) */
++    #endif
++#endif
++
+ #include "../osspec.h"
+ #include "../logger.h"
+ #include "../hald.h"
+@@ -137,6 +157,9 @@
+ static void hald_helper_device_name (gchar *action, guint64 seqnum, gchar *subsystem, 
+ 				     gchar *sysfs_path, gchar *device_name, struct hald_helper_msg *msg);
+ static gboolean hald_helper_data (GIOChannel *source, GIOCondition condition, gpointer user_data);
++#ifdef KOBJECT_UEVENT_ENABLED
++static gboolean kobject_uevent_handler (GIOChannel *source, GIOCondition condition, gpointer user_data);
++#endif
+ 
+ static HalDevice *add_device (const char *sysfs_path, const char *subsystem, struct hald_helper_msg *msg);
+ 
+@@ -181,6 +204,11 @@
+ 	socklen_t addrlen;
+ 	GIOChannel *channel;	
+ 	const int on = 1;
++#ifdef KOBJECT_UEVENT_ENABLED
++        int ksocketfd;
++        struct sockaddr_nl ksnl;
++        GIOChannel *kchannel;
++#endif    
+ 
+ 	/* setup socket for listening from datagrams from the
+ 	 * hal.hotplug and hal.dev helpers.
+@@ -208,6 +236,27 @@
+ 	g_io_add_watch (channel, G_IO_IN, hald_helper_data, NULL);
+ 	g_io_channel_unref (channel);
+ 
++        /* recieve kernel events and send them to the DBUS system bus */
++#ifdef KOBJECT_UEVENT_ENABLED
++        memset (&ksnl, 0x00, sizeof(struct sockaddr_nl));
++        ksnl.nl_family = AF_NETLINK;
++        ksnl.nl_pid = getpid();
++        ksnl.nl_groups = 0xffffffff;
++
++        ksocketfd = socket (PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
++        if (ksocketfd == -1) {
++            DIE (("Couldn't open kobject-uevent netlink socket"));
++        }
++
++        if (bind(ksocketfd, (struct sockaddr *) &ksnl, sizeof(struct sockaddr_nl)) < 0) {
++            fprintf (stderr, "Error binding to netlink socket");
++            close (ksocketfd);
++            exit (1);
++        }
++
++        kchannel = g_io_channel_unix_new (ksocketfd);
++        g_io_add_watch (kchannel, G_IO_IN, kobject_uevent_handler, NULL);
++#endif /* ifdef KOBJECT_UEVENT_ENABLED */
+ 
+ 	/* get mount path for sysfs */
+ 	rc = sysfs_get_mnt_path (sysfs_mount_path, SYSFS_PATH_MAX);
+@@ -1762,3 +1811,81 @@
+ out:
+ 	return TRUE;
+ }
++
++#ifdef KOBJECT_UEVENT_ENABLED
++static gboolean
++kobject_uevent_handler (GIOChannel *source,
++            GIOCondition condition,
++            gpointer user_data)
++{
++        static char buffer[HOTPLUG_BUFFER_SIZE + OBJECT_SIZE];
++        const char *devpath;
++        const char *action;
++        const char *envp[HOTPLUG_NUM_ENVP];
++        int i;
++        int sock;
++        char *pos;
++        size_t bufpos;
++        ssize_t buflen;
++        DBusMessage *dbusMessage;
++        DBusMessageIter dbusIter;
++
++        HAL_INFO (("Received kernel event interrupt"));
++
++        sock = g_io_channel_unix_get_fd (source);
++        buflen = recv (sock, &buffer, sizeof(buffer), 0);
++        if (buflen <  0) {
++                HAL_WARNING (("Error reading message"));
++                return TRUE;
++        }
++
++        if ((size_t)buflen > sizeof(buffer)-1)
++                buflen = sizeof (buffer)-1;
++
++        /* save start of payload */
++        bufpos = strlen (buffer) + 1;
++
++        /* action string */
++        action = buffer;
++        pos = strchr(buffer, '@');
++        if (!pos)
++                return TRUE;
++        pos[0] = '\0';
++
++        /* sysfs path */
++        devpath = &pos[1];
++
++        /* hotplug events have the environment attached - reconstruct envp[] */
++        for (i = 0; (bufpos < (size_t)buflen) && (i < HOTPLUG_NUM_ENVP-1); i++) {
++                int keylen;
++                char *key;
++
++                key = &buffer[bufpos];
++                keylen = strlen(key);
++                envp[i] = key;
++                bufpos += keylen + 1;
++        }
++        envp[i] = NULL;
++
++        /* generate and send DBUS message */
++        dbusMessage = dbus_message_new_signal ("/org/kernel/KobjectUevent", "org.kernel.KobjectUevent", "KobjectUevent");
++        dbus_message_append_iter_init (dbusMessage, &dbusIter);
++
++        /* add payload */
++        for(i = 0; envp[i] != NULL; i++) {
++                dbus_message_iter_append_string (&dbusIter, envp[i]);
++        }
++                
++        if (dbusMessage == NULL) {
++                HAL_WARNING (("Error creating DBUS message."));
++                return TRUE;
++        }
++        if (!hald_dbus_message_send (dbusMessage))
++                HAL_WARNING (("Error sending DBUS message."));
++
++        dbus_message_unref (dbusMessage);
++        hald_dbus_connection_flush ();
++
++        return TRUE;
++}
++#endif /* ifdef KOBJECT_UEVENT_ENABLED */

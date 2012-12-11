@@ -1,0 +1,22 @@
+AC_INIT(src/test-gtk-oxo-widget.c)
+
+AM_INIT_AUTOMAKE(GtkOxoWidget, 0.1)
+AM_MAINTAINER_MODE
+
+AC_PROG_CC
+
+GOB2_CHECK([2.0.0])
+
+PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, have_gtk=true, have_gtk=false)
+if test "x${have_gtk}" = "xfalse" ; then
+        AC_MSG_ERROR([No GTK+ >= 2.8.0 package information found])
+fi
+AC_SUBST(GTK_CFLAGS)
+AC_SUBST(GTK_LIBS)
+
+CFLAGS="${CFLAGS} -Wall -Werror -g -ggdb3 -O0"
+
+AC_OUTPUT([
+        Makefile        \
+        src/Makefile
+])

@@ -1,0 +1,158 @@
+Introducing DAL, the "Desktop Abstraction Layer"
+------------------------------------------------
+!WARNING: This is a draft document.
+
+1. The problem
+
+As you all know, when using Linux one's got lots of choices. You can choose
+between 100 different media players, 50 instant messaging clients, a couple of
+100 email clients, 20 P2P apps and 10 VoIP/SIP/... applications.
+
+This is great. As a user, you can choose the program that suits best to your
+needs.
+
+There is one major issue tough caused by this diversity: the lack of
+intagration.
+There are integrated apps: there's a basic Gaim <-> Evolution integration, you
+can control XMMS from within Gaim, there's a panel applet to control XMMS,...
+
+Now you could be asking "What's the problem then?" Simple. I can write a
+plugin for Gaim that displays the title of the currently playing track in XMMS
+in my nickname. This plugin will "talk" to XMMS using some obscure protocol
+over a Unix socket.
+Now I start to dislike XMMS, and switch to Rhythmbox. My plugin won't work any
+longer. I'll have to learn the API of Rhythmbox's event socket (if it's got
+one?), rewrite my plugin,...
+
+Anoher example: I want to write a Gaim plugin that sets my status to "Away"
+when my screensaver is running. This is possible to write at the moment
+because almost everyone uses xscreensaver, so I should only take one program
+into account, but more screensaver daemons can (and will? See live.gnome.org)
+arise.
+
+One more: I'm some beamer program (presentation, like OOo Impress), and I
+want to tell the screensaver not to come up next 5 minutes. How should I
+address it?
+
+Maybe you know the program called "w.bloggar", a very nice blog editor under
+Windows. It's got the option to add "Current playing track:..." at the end of
+posts you make. Now if I want to write such a feature for some Linux program,
+what media player should I address, and how should I do it? (Note: x.bloggar
+only works with WMP, too...)
+
+
+
+2. Possible solution
+
+The Desktop Abstraction Layer, which is at a certain level similar to HAL
+(Hardware Abstraction Layer).
+
+It consists of 2 parts: one tree with all desktop applications and their
+properties, another one with "events" and general information.
+
+This is what I got in mind now, will be changed of course:
+The application tree
+        /org/freedesktop/DAL/Applications
+                                         /Music
+                                               /XMMS
+                                               Properties: - path to executable
+                                                           - Version
+                                                           - Homepage
+                                                           - Stuff out of the .desktop file
+                                                           - ...
+                                         /IM
+                                            /Gaim
+                                            Properties: ...
+                                            /Kopete
+                                            Properties: ...
+                                         /Browser
+                                                 /Firefox
+                                                 Properties: ...
+                                                 /Epiphany
+                                                 Properties: ...
+                                         ...
+
+An application only gets an entry in the tree *when it is running* (similar to
+HAL: you only see the device when it's attached).
+
+Next to this, there are pushed events:
+-> NewTrackStarted
+        - By: /org/freedesktop/DAL/Applications/Music/XYZ
+-> ScreensaverStarted                   (IM client sets you "Away", music stops playing,...)
+        - By: /...
+-> ScreensaverStopped
+        - By: /...
+-> FullscreenApplicationStarted         (could be a DVD playback, so screensaver should not be started etc.)
+        - By: /...
+-> BuddyLoggedIn                        (Evo can show this buddy as "online" in my address book, without caring wether I'm using aMsn, Kopete or Gaim)
+        - By: /...
+        - ID: ...
+-> NewMailReceived
+        - By: /...
+        - ID: ...
+-> IncomingVoiceConnection              (e.g. GnomeMeeting, Skype,... Result could be your media playing pausing,...)
+        - By: /...
+
+There can be pulled information too:
+-> GetPlayingTrack
+        - Application: /org/...
+
+        which returns the URI to the playing track
+
+-> GetBuddyInfo
+        - Application: /...
+        - ID: ...
+
+        which returns an "IMBuddy" object, with its obligatory and optional properties
+
+-> GetMailInfo
+        - Applcication: /...
+        - ID: ...
+
+and so on.
+
+All this information is transmitted through the DBUS session bus.
+
+
+All of this should be non-intrusive where possible. So the DAL daemon should
+be able to load plugins that interact with a specific program.
+E.g. XMMS does not support DBUS. We could write a plugin for DAL that listens
+on XMMS's socket, and generates corresponding DAL/DBUS events.
+Another possibility, let's take Evolution. We could write a patch for Evo so a
+DBUS signal is sent out when a mail is received. Next to this we have a DAL
+plugin that listens to these events, and generates a generalised DAL event. In
+this way the listening application should not care wether the mail was
+received by Evo, Thunderbird or KMail: as long as DAL can get the event from
+these clients, the listener will get the event with it's well-known
+properties.
+
+
+Application properties should be provided by us or the application developer
+in some XML file.
+
+
+
+3. Future
+
+All of this can be extended: create some system where applications can ask DAL
+to pause all music playback (e.g. when a screensaver started, a DVD movie
+started,...)
+Another thing: if for now I got "Rhythmbox" as my default music player, and at a certain moment I got BMP running, playing some music. If now in Nautilus I open a music file, RB will be started and play the file, whilst BMP is still playing. This could be changed: Nautilus (or some other component, I dont really know what component is doing this stuff) asks DAL what program is playing music at the time I open the file. If no music is playing, it starts RB. If I'm running BMP, Nautilus can ask DAL to tell BMP to start playback file XYZ. DAL will then, by issueing the BMP helper plugin, tell BMP to start playing file XYZ.
+
+
+
+4. Why Freedesktop?
+
+This project should be desktop-neutral, allowing all possible desktop
+applications to take advantage of given information. It should allow easier
+integration of many desktop applications.
+
+
+
+CHANGELOG
+---------
+12/01/05: Initial version (Ikke)
+
+
+
+Written by Ikke                                             http://www.eikke.com

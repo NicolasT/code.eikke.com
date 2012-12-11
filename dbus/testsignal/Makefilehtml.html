@@ -1,0 +1,16 @@
+CC=gcc
+CFLAGS=-g -Wall
+
+PROGS=dbus-test-client dbus-test-sender
+
+default: all
+all: $(PROGS)
+
+dbus-test-client: dbus-test-client.c
+	$(CC) $(CFLAGS) `pkg-config --cflags --libs dbus-glib-1` -o $@ $<
+
+dbus-test-sender: dbus-test-sender.c
+	$(CC) $(CFLAGS) `pkg-config --cflags --libs dbus-1` -o $@ $<
+
+clean:
+	rm -f $(PROGS)

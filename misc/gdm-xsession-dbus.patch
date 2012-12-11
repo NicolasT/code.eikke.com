@@ -1,0 +1,18 @@
+--- /etc/X11/gdm/Xsession.orig	2005-01-11 12:42:52.737745056 +0100
++++ /etc/X11/gdm/Xsession	2005-01-11 12:57:34.158748696 +0100
+@@ -216,6 +216,15 @@
+     echo "$0: ssh-agent not found!"
+ fi
+ 
++# add dbus-launch if found
++dbuslaunch="`which dbus-launch 2>/dev/null`"
++if [ -n "$dbuslaunch" ] && [ -x "$dbuslaunch" ]; then
++    command="$dbuslaunch --sh-syntax --exit-with-session $command"
++elif [ -z "$dbuslaunch" ] ; then
++    echo "$0: dbus-launch not found!"
++fi
++        
++
+ echo "$0: Setup done, will execute: $command"
+ 
+ eval exec $command

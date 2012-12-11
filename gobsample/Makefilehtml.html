@@ -1,0 +1,14 @@
+all: sample
+default: all
+
+sample: main.c sample-object.c
+	gcc -o sample `pkg-config --libs --cflags glib-2.0 gobject-2.0` -g main.c sample-object.c
+
+sample-object.c: sample-object.gob
+	gob2 sample-object.gob
+
+clean:
+	rm -f sample-object.c
+	rm -f sample-object.h
+	rm -f sample-object-private.h
+	rm -f sample

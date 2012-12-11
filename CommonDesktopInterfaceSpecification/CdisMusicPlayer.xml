@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml-stylesheet href="CdisInterface.xsl" type="text/xsl"?>
+<!--
+Comments
+********
+- We *do* need ID's for Arguments and Returned Values, because XML has no "order" by itself
+-->
+<cdis:DesktopService cdis:name="CdisMusicPlayer" xmlns:cdis="http://www.freedesktop.org/Standards/CDIS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.freedesktop.org/Standards/CDIS CdisInterface.xsd">
+        <cdis:Description>Interface for a Music Player</cdis:Description>
+        <cdis:Interface>org.freedesktop.CDIS.MusicPlayer</cdis:Interface>
+        <cdis:ExposedEvents>
+                <cdis:Event cdis:name="NewTrackStarted">
+                        <cdis:Description>A new track started playing</cdis:Description>
+                        <cdis:Arguments>
+                                <cdis:Argument cdis:id="1" cdis:name="Uri">
+                                        <cdis:Type>String</cdis:Type>
+                                        <cdis:Description>The URI of the newly started track, compatible with the FDO File URI specification</cdis:Description>
+                                </cdis:Argument>
+                        </cdis:Arguments>
+                </cdis:Event>
+                <cdis:Event cdis:name="PlaybackPaused">
+                        <cdis:Description>Playback paused</cdis:Description>
+                        <cdis:Arguments />
+                </cdis:Event>
+                <cdis:Event cdis:name="PlaybackStarted">
+                        <cdis:Description>Playback started or restarted</cdis:Description>
+                        <cdis:Arguments />
+                </cdis:Event>
+        </cdis:ExposedEvents>
+        <cdis:ExposedMethods>
+                <cdis:Method cdis:name="HandleUri">
+                        <cdis:Description>Check whether the player can handle this URI</cdis:Description>
+                        <cdis:Arguments>
+                                <cdis:Argument cdis:id="1" cdis:name="Uri">
+                                        <cdis:Type>String</cdis:Type>
+                                        <cdis:Description>FDO File URI spec compatible URI</cdis:Description>
+                                </cdis:Argument>
+                        </cdis:Arguments>
+                        <cdis:ReturnValues>
+                                <cdis:ReturnValue cdis:id="1" cdis:name="Handles">
+                                        <cdis:Type>Bool</cdis:Type>
+                                        <cdis:Description>Whether the player can handle the requested URI</cdis:Description>
+                                </cdis:ReturnValue>
+                        </cdis:ReturnValues>
+                </cdis:Method>
+                <cdis:Method cdis:name="SetCurrentTrackUri">
+                        <cdis:Description>Request the player to start playing URI</cdis:Description>
+                        <cdis:Arguments>
+                                <cdis:Argument cdis:id="1" cdis:name="Uri">
+                                        <cdis:Type>String</cdis:Type>
+                                        <cdis:Description>The URI</cdis:Description>
+                                </cdis:Argument>
+                        </cdis:Arguments>
+                        <cdis:ReturnValues>
+                                <cdis:ReturnValue cdis:id="1" cdis:name="Success">
+                                        <cdis:Type>Bool</cdis:Type>
+                                        <cdis:Description>Whether the player could do what we asked</cdis:Description>
+                                </cdis:ReturnValue>
+                        </cdis:ReturnValues>
+                </cdis:Method>
+                <cdis:Method cdis:name="PausePlayback">
+                        <cdis:Description>Request the player to pause playback</cdis:Description>
+                        <cdis:Arguments />
+                        <cdis:ReturnValues>
+                                <cdis:ReturnValue cdis:id="1" cdis:name="Success">
+                                        <cdis:Type>Bool</cdis:Type>
+                                        <cdis:Description>Whether the player was able to honour our request</cdis:Description>
+                                </cdis:ReturnValue>
+                        </cdis:ReturnValues>
+                </cdis:Method>
+                <cdis:Method cdis:name="StartPlayback">
+                        <cdis:Description>Request the player to resume playback when in paused state</cdis:Description>
+                        <cdis:Arguments />
+                        <cdis:ReturnValues>
+                                <cdis:ReturnValue cdis:id="1" cdis:name="Success">
+                                        <cdis:Type>Bool</cdis:Type>
+                                        <cdis:Description>Same thing</cdis:Description>
+                                </cdis:ReturnValue>
+                        </cdis:ReturnValues>
+                </cdis:Method>
+                <cdis:Method cdis:name="GetCurrentTrackUri">
+                        <cdis:Description>Request the URI of the track currently "on the turntable"</cdis:Description>
+                        <cdis:Arguments />
+                        <cdis:ReturnValues>
+                                <cdis:ReturnValue cdis:id="1" cdis:name="Uri">
+                                        <cdis:Type>String</cdis:Type>
+                                        <cdis:Description>URI of the track currently loaded</cdis:Description>
+                                </cdis:ReturnValue>
+                        </cdis:ReturnValues>
+                </cdis:Method>
+        </cdis:ExposedMethods>
+</cdis:DesktopService>

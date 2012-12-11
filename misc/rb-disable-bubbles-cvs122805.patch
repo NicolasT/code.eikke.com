@@ -1,0 +1,68 @@
+? rb-disable-bubbles.patch
+? widgets/.eggtrayicon.c.swp
+? widgets/rb-cell-renderer-rating.loT
+Index: configure.ac
+===================================================================
+RCS file: /cvs/gnome/rhythmbox/configure.ac,v
+retrieving revision 1.196
+diff -u -b -B -r1.196 configure.ac
+--- configure.ac	14 Dec 2005 20:37:02 -0000	1.196
++++ configure.ac	28 Dec 2005 15:50:41 -0000
+@@ -194,6 +194,19 @@
+ RHYTHMBOX_CFLAGS="$RHYTHMBOX_CFLAGS $SOUNDSYSTEM_CFLAGS"
+ RHYTHMBOX_LIBS="$RHYTHMBOX_LIBS $SOUNDSYSTEM_LIBS"
+ 
++dnl Check for bubble support
++AC_MSG_CHECKING(whether to enable bubbles)
++rb_bubbles_default="yes"
++AC_ARG_ENABLE(bubbles,
++              AC_HELP_STRING([--enable-bubbles],
++                             [Enable bubbles]),,
++                             [enable_bubbles=$rb_bubbles_default])
++if test x"$enable_bubbles" = xyes; then
++   AC_DEFINE([ENABLE_BUBBLES],[],[Define if bubbles should be enabled])
++   AC_MSG_RESULT(yes)
++else
++   AC_MSG_RESULT(no)
++fi
+ 
+ dnl Tag writing
+ AC_ARG_ENABLE(tag-writing,
+@@ -697,6 +710,11 @@
+ 	AC_MSG_NOTICE([** Audioscrobbler support enabled])
+ else
+ 	AC_MSG_NOTICE([   Audioscrobbler support disabled])
++fi
++if test x"$enable_bubbles" = xyes; then
++        AC_MSG_NOTICE([** Bubbles support enabled])
++else
++        AC_MSG_NOTICE([   Bubbles support disabled])
+ fi
+ 
+ AC_MSG_NOTICE([End options])
+Index: widgets/eggtrayicon.c
+===================================================================
+RCS file: /cvs/gnome/rhythmbox/widgets/eggtrayicon.c,v
+retrieving revision 1.4
+diff -u -b -B -r1.4 eggtrayicon.c
+--- widgets/eggtrayicon.c	2 Sep 2005 01:53:09 -0000	1.4
++++ widgets/eggtrayicon.c	28 Dec 2005 15:50:41 -0000
+@@ -456,7 +456,9 @@
+ 
+   egg_notification_bubble_set (icon->bubble, _("Notification"),
+ 			       NULL, message);
++#ifdef ENABLE_BUBBLES
+   egg_notification_bubble_show (icon->bubble, timeout);
++#endif
+ 
+   return 1;
+ }
+@@ -498,6 +500,8 @@
+   
+   egg_notification_bubble_set (icon->bubble, primary,
+ 			       msgicon, secondary);
++#ifdef ENABLE_BUBBLES
+   egg_notification_bubble_show (icon->bubble, timeout);
++#endif
+   return icon->bubble;
+ }

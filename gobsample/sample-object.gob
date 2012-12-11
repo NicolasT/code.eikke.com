@@ -1,0 +1,24 @@
+requires 2.0.0
+
+class Sample:Object from G:Object {
+        private guint c = 0;
+
+        public G:Object * new(guint a (check > 2)) {
+                Self *s = NULL;
+
+                s = SELF(GET_NEW);
+                s->_priv->c = a;
+
+                self_magic(s);
+
+                return G_OBJECT(s);
+        }
+
+        public void do_something(self) {
+                g_print("c=%d\n", self->_priv->c);
+        }
+
+        private void magic(self) {
+                self->_priv->c++;
+        }
+}

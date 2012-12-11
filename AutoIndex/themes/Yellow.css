@@ -1,0 +1,146 @@
+/***************************************************************************
+                  AutoIndex PHP Script, by Justin Hagstrom
+                             -------------------
+
+   filename             : stylesheet.css
+
+   copyright            : Copyright (C) 2002-2004 Justin Hagstrom
+   license              : GNU General Public License (GPL)
+
+   website & forum      : http://autoindex.sourceforge.net
+   e-mail               : JustinHagstrom [at] yahoo [dot] com
+
+
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+ ***************************************************************************/
+
+/*  The default BODY setting  */
+
+.autoindex_body
+{
+	font-family: Verdana, Helvetica, Arial, sans-serif;
+	font-size: 12px;
+	background-color: #FCFCFC;
+}
+
+.autoindex_body img
+{
+	border: none;
+}
+
+/*  Table settings  */
+
+.light_row
+{
+	background-color: #FEFEFE;
+	font-size: 12px;
+}
+
+.dark_row
+{
+	background-color: #EEEEEE;
+	font-size: 12px;
+}
+
+
+.light_row:hover {
+	background-color: #FFF2BF;
+}
+
+.dark_row:hover {
+	background-color: #FFF2BF;
+}
+
+.default_td
+{
+	border: 1px solid #FAFAFA;
+	font-size: 12px;
+	padding: 1px;
+}
+
+.default_td:hover
+{
+	font-size: 12px;
+	padding: 1px;
+	border: 1px solid #FFCC00;
+}
+
+.default_th
+{
+	background-color: #FFCC00;
+	border: 1px solid #AA9339;
+	font-size: 12px;
+	padding: 2px;
+}
+
+/*  Settings for links  */
+.default_a:visited, .default_a:active
+{
+	color: #00008F;
+	text-decoration: none;
+}
+
+.default_a:link
+{
+	color: #0000FF;
+	text-decoration: none;
+}
+
+.default_a:hover
+{
+	color: #392266;
+	text-decoration: none;
+	font-weight: normal;
+}
+
+/*  The style for every button  */
+.button
+{
+	color: #707070;
+ 	background-color: #F2F6FC;
+	font-family: arial, sans-serif;
+	font-size: 11px;
+	text-align: left;
+	vertical-align: middle;
+	font-weight: bold;
+	cursor: pointer;
+	border: 0px outset #CBCBCB;
+	padding: 3px 10px 3px 10px;
+}
+
+/*  Misc. Styles  */
+.paragraph
+{
+	background: #F2F6FC;
+	color: #000020;
+	font-size: 13px;
+}
+.default_hr
+{
+	color: #000020;
+	background-color: #000020;
+	border: none;
+	width: 75%;
+	height: 1px;
+}
+.fixed_width
+{
+	background: #F2F6FC;
+	color: #000020;
+	font-family: lucida console, sans-serif;
+	font-size: 12px;
+}
+.black_link
+{
+	color: #000000;
+	text-decoration: none;
+}
+.small
+{
+	font-size: 10px;
+}
